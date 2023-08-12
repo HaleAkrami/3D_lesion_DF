@@ -24,6 +24,7 @@ from generative.networks.schedulers import DDPMScheduler, DDIMScheduler
 import numpy as np
 import SimpleITK as sitk
 import torchio as tio
+import torch.nn as nn
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 from multiprocessing import Manager
 
@@ -31,7 +32,10 @@ from typing import Optional
 
 import warnings
 warnings.filterwarnings('ignore')
+import os
 
+# Set the CUDA_VISIBLE_DEVICES environment variable to specify the GPU device
+os.environ['CUDA_VISIBLE_DEVICES'] = '2,3,5,6'
 # Set the manualSeed, random seed, and device
 manualSeed = 999
 random.seed(manualSeed)
@@ -55,7 +59,7 @@ sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 
 
 config = {
-    'batch_size': 2,
+    'batch_size': 4,
     'imgDimResize':(160,192,160),
     'imgDimPad': (208, 256, 208),
     'spatialDims': '3D',
@@ -247,10 +251,10 @@ def get_augment(cfg): # augmentations that may change every epoch
 
 
 imgpath = {}
-csvpath_train = '/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_train_fold0.csv'
-pathBase = '/scratch1/akrami/Data_train'
-csvpath_val = '/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_val_fold0.csv'
-csvpath_test = '/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/Brats21_test.csv'
+csvpath_train = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv'
+pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
+csvpath_val = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_val_fold0.csv'
+csvpath_test = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/Brats21_test.csv'
 var_csv = {}
 states = ['train','val','test']
 var_csv['train'] = pd.read_csv(csvpath_train)
@@ -277,13 +281,13 @@ data_test = Train(var_csv['test'],config)
 
 
 #data_train = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_train_fold0.csv', converters={'img_path': pd.eval}), config)
-train_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=1)
+train_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
 
 #data_val = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_val_fold0.csv', converters={'img_path': pd.eval}), config)
-val_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=1)
+val_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
 
 #data_test = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/Brats21_test.csv', converters={'img_path': pd.eval}), config)
-test_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=1)
+test_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
 
 
 device = torch.device("cuda")
@@ -298,6 +302,9 @@ model = DiffusionModelUNet(
     num_res_blocks=2,
 )
 model.to(device)
+if torch.cuda.device_count() > 1:
+    print("Using", torch.cuda.device_count(), "GPUs!")
+    model = nn.DataParallel(model)
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
@@ -349,7 +356,7 @@ for epoch in range(n_epochs):
         model.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
-            images = batchbatch['vol']['data'].to(device)
+            images = batch['vol']['data'].to(device)
             noise = torch.randn_like(images).to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
@@ -383,7 +390,7 @@ for epoch in range(n_epochs):
 
         plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/model_epoch{epoch_number}.pt"
+        model_filename = f"./models/model_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 total_time = time.time() - total_start
