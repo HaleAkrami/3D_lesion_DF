@@ -18,7 +18,7 @@ import io
 import random
 import math
 import pandas as pd
-from generative.inferers import DiffusionInferer
+from generative.inferers import DiffusionInfererMask
 from generative.networks.nets import DiffusionModelUNet
 from generative.networks.schedulers import DDPMScheduler, DDIMScheduler
 import numpy as np
@@ -35,7 +35,7 @@ warnings.filterwarnings('ignore')
 import os
 torch.cuda.empty_cache()
 # Set the CUDA_VISIBLE_DEVICES environment variable to specify the GPU device
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2,3,5,6'
 # Set the manualSeed, random seed, and device
 manualSeed = 999
 random.seed(manualSeed)
@@ -197,7 +197,51 @@ class vol2slice(Dataset):
             
     def __getitem__(self, index):
         subject = self.ds.__getitem__(index)
+        
+        #Commenting the next few lines to introduce a simple masking operation
+#         if self.onlyBrain:
+#             start_ind = None
+#             for i in range(subject['vol'].data.shape[-1]):
+#                 if subject['mask'].data[0,:,:,i].any() and start_ind is None: # only do this once
+#                     start_ind = i 
+#                 if not subject['mask'].data[0,:,:,i].any() and start_ind is not None: # only do this when start_ind is set
+#                     stop_ind = i 
+#             low = start_ind
+#             high = stop_ind
+#         else: 
+#             low = 0
+#             high = subject['vol'].data.shape[-1]
+#         if self.slice is not None:
+#             self.ind = self.slice
+#             if self.seq_slices is not None:
+#                 low = self.ind
+#                 high = self.ind + self.seq_slices
+#                 self.ind = torch.randint(low,high,size=[1])
+#         else:
+#             if self.cfg.get('unique_slice',False): # if all slices in one batch need to be at the same location
+#                 if self.counter % self.cfg.batch_size == 0 or self.ind is None: # only change the index when changing to new batch
+#                     self.ind = torch.randint(low,high,size=[1])
+#                 self.counter = self.counter +1
+#             else: 
+#                 self.ind = torch.randint(low,high,size=[1])
+
+#         subject['ind'] = self.ind
+
+#         subject['vol'].data = subject['vol'].data[...,self.ind]
+#         subject['mask'].data = subject['mask'].data[...,self.ind]
+
+
         subject['vol'].data = subject['vol'].data.permute(0,3, 2, 1)
+    
+#         #msk_normal = ~np.all(subject['vol'].data.numpy()[0] == 0,axis=(1,2)) # Remove empty planes (Replacing this line of code to include slices that have significant prain volume in them (more than 15% of the image is brain))
+        
+#         msk_normal = (np.count_nonzero(subject['vol'].data.numpy()[0],axis=(1,2))/(subject['vol'].data.numpy()[0].shape[1]*subject['vol'].data.numpy()[0].shape[2]))>=0.15
+        
+#         choices = np.arange(len(msk_normal))[msk_normal]
+        
+#         sample_idx = np.array(random.choices(choices,k = 1))
+        
+#         subject['vol'].data = subject['vol'].data[0:2, sample_idx, ...]
 
         return subject
 
@@ -211,25 +255,13 @@ def get_augment(cfg): # augmentations that may change every epoch
 
 
 imgpath = {}
-# '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
-#'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
-csvpath_trains = ['/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
+csvpath_train = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv'
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
 csvpath_val = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_val_fold0.csv'
 csvpath_test = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/Brats21_test.csv'
 var_csv = {}
 states = ['train','val','test']
-
-df_list = []
-
-# Loop through each CSV file path and read it into a DataFrame
-for csvpath in csvpath_trains:
-    df = pd.read_csv(csvpath)
-    df_list.append(df)
-
-
-
-var_csv['train'] = pd.concat(df_list, ignore_index=True)
+var_csv['train'] = pd.read_csv(csvpath_train)
 var_csv['val'] = pd.read_csv(csvpath_val)
 var_csv['test'] = pd.read_csv(csvpath_test)
 # if cfg.mode == 't2':
@@ -239,10 +271,7 @@ for state in states:
     var_csv[state]['settype'] = state
     var_csv[state]['img_path'] = pathBase  + var_csv[state]['img_path']
     var_csv[state]['mask_path'] = pathBase  + var_csv[state]['mask_path']
-    if state != 'test':
-        var_csv[state]['seg_path'] = None
-    else:
-        var_csv[state]['seg_path'] = pathBase  + var_csv[state]['seg_path']
+    var_csv[state]['seg_path'] = None
 
     # if cfg.mode == 't2': 
     #     var_csv[state] =var_csv[state][var_csv[state].img_name.isin(keep_t2['0'].str.replace('t2','t1'))]
@@ -282,7 +311,7 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
-inferer = DiffusionInferer(scheduler)
+inferer = DiffusionInfererMask(scheduler)
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
@@ -312,9 +341,11 @@ for epoch in range(n_epochs):
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
-
+            mask = torch.randn_like(images).to(device)
+            mask[mask<0.5]=0
+            mask[mask >= 0.5] = 1
             # Get model prediction
-            noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
+            noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps,mask = mask)
 
             loss = F.mse_loss(noise_pred.float(), noise.float())
 
@@ -349,23 +380,23 @@ for epoch in range(n_epochs):
 
         # Sampling image during training
         #80, 96, 80
-        image = torch.randn_like(images)[0:1,:,:,:]
+        image = torch.randn((1, 1, 160, 192, 160))
         image = image.to(device)
         scheduler.set_timesteps(num_inference_steps=1000)
         with autocast(enabled=True):
             image = inferer.sample(input_noise=image, diffusion_model=model, scheduler=scheduler)
 
         plt.figure(figsize=(2, 2))
-        plt.imshow(image[0, 0, :, :, 20].cpu(), vmin=0, vmax=1, cmap="gray")
+        plt.imshow(image[0, 0, :, :, 15].cpu(), vmin=0, vmax=1, cmap="gray")
         plt.tight_layout()
         plt.axis("off")
         plt.show()
         # Modify the filename to include the epoch number
-        filename = f"./results/test/sample_epoch{epoch}.png"
+        filename = f"./results/small_net/sample_epoch{epoch}.png"
 
         plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/test/model_epoch{epoch}.pt"
+        model_filename = f"./models/small_net/model_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 total_time = time.time() - total_start
