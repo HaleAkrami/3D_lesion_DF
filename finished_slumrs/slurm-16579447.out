@@ -1,0 +1,22 @@
+==========================================
+SLURM_JOB_ID = 16579447
+SLURM_JOB_NODELIST = d13-09
+TMPDIR = /tmp/SLURM_16579447
+==========================================
+wandb: Currently logged in as: hale-akrami (usc_akrami). Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.15.9
+wandb: Run data is saved locally in /project/ajoshi_27/akrami/3D_lesion_DF/wandb/run-20230903_124206-jmteqoll
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run half_res
+wandb: ⭐️ View project at https://wandb.ai/usc_akrami/33_ddpm
+wandb: 🚀 View run at https://wandb.ai/usc_akrami/33_ddpm/runs/jmteqoll
+2023-09-03 12:42:18,092 - A matching Triton is not available, some optimizations will not be enabled.
+Error caught was: No module named 'triton'
+Traceback (most recent call last):
+  File "/project/ajoshi_27/akrami/3D_lesion_DF/3d_ddpm.py", line 171, in <module>
+    val_interval = cfg.get('val_interval',5)
+NameError: name 'cfg' is not defined
+wandb: Waiting for W&B process to finish... (failed 1). Press Control-C to abort syncing.
+wandb: - 0.004 MB of 0.004 MB uploaded (0.000 MB deduped)wandb: \ 0.004 MB of 0.012 MB uploaded (0.000 MB deduped)wandb: 🚀 View run half_res at: https://wandb.ai/usc_akrami/33_ddpm/runs/jmteqoll
+wandb: Synced 6 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20230903_124206-jmteqoll/logs
