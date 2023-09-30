@@ -327,7 +327,12 @@ class vol2slice(Dataset):
     def __getitem__(self, index):
         subject = self.ds.__getitem__(index)
         subject['vol'].data = subject['vol'].data.permute(0,3, 2, 1)
+        msk_normal = (np.count_nonzero(subject['vol'].data.numpy()[0],axis=(1,2))/(subject['vol'].data.numpy()[0].shape[1]*subject['vol'].data.numpy()[0].shape[2]))>=0.15
+        
 
+        choices = np.arange(len(msk_normal))[msk_normal]
+        sample_idx = np.array(random.choices(choices,k = 1))
+        subject['vol'].data = subject['vol'].data[0:2, sample_idx, ...]
         return subject
 
 def get_augment(cfg): # augmentations that may change every epoch
