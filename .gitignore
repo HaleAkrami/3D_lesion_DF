@@ -16,7 +16,11 @@ wandb/
 .ipynb_checkpoints
 # pc_environment.env
 outputlog*
-errorlog*generative/
+
+errorlog*model-zoo/
+finished_slumrs/
 generative/
 models/
 results/
+wandb/
+

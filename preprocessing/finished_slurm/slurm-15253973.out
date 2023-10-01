@@ -1,0 +1,9 @@
+==========================================
+SLURM_JOB_ID = 15253973
+SLURM_JOB_NODELIST = a01-01
+TMPDIR = /tmp/SLURM_15253973
+==========================================
+Resample
+(-i / --img-dir) argument needs to be a directory of NIfTI images.
+Generate masks
+slurmstepd: error: *** JOB 15253973 ON a01-01 CANCELLED AT 2023-06-13T23:30:42 ***

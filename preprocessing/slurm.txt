@@ -1,0 +1,36 @@
+(cuda10) [akrami@e22-11 preprocessing]$ sbatch submit_Brats21.slurm 
+Submitted batch job 15742192
+1251 t1 1251 t2
+(cuda10) [akrami@e22-11 preprocessing]$ sbatch submit_HCP.slurm 
+Submitted batch job 15742205
+(cuda10) [akrami@e22-11 preprocessing]$ sbatch submit_IXI.slurm 
+Submitted batch job 15742206
+
+
+
+(cuda10) [akrami@d23-13 preprocessing]$ sbatch submit_MSLUB.slurm 
+Submitted batch job 15776240
+(cuda10) [akrami@d23-13 preprocessing]$ sbatch submit_CamCan.slurm 
+Submitted batch job 15777761
+
+(cuda10) [akrami@d23-13 preprocessing]$ sbatch submit_T1_T2.slurm 
+Submitted batch job 15778134
+(cuda10) [akrami@d23-13 preprocessing]$ sbatch submit_HCP.slurm    
+Submitted batch job 15778135
+(cuda10) [akrami@d23-13 preprocessing]$ 
+
+
+
+
+IXI->
+0-pre-t1 582
+v4- after-pre(581)(not sure what happen to one!)
+
+
+
+0-pte-t2 578 (v1-578) after-pre(patch->415, patch-v2->163)-> copied all too 
+
+
+Brats->1251 t1 1251 t2
+
+MSLUB->
