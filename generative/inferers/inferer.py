@@ -104,6 +104,57 @@ class DiffusionInferer(Inferer):
         else:
             return image
 
+
+    @torch.no_grad()
+    def sample_batch(
+        self,
+        input_noise: torch.Tensor,
+        diffusion_model: Callable[..., torch.Tensor],
+        scheduler: Callable[..., torch.Tensor] | None = None,
+        save_intermediates: bool | None = False,
+        intermediate_steps: int | None = 100,
+        conditioning: torch.Tensor | None = None,
+        verbose: bool = True,
+    ) -> torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]]:
+        """
+        Args:
+            input_noise: random noise, of the same shape as the desired sample.
+            diffusion_model: model to sample from.
+            scheduler: diffusion scheduler. If none provided will use the class attribute scheduler
+            save_intermediates: whether to return intermediates along the sampling change
+            intermediate_steps: if save_intermediates is True, saves every n steps
+            conditioning: Conditioning for network input.
+            verbose: if true, prints the progression bar of the sampling process.
+        """
+        if not scheduler:
+            scheduler = self.scheduler
+        image = input_noise
+        if verbose and has_tqdm:
+            progress_bar = tqdm(scheduler.timesteps)
+        else:
+            progress_bar = iter(scheduler.timesteps)
+        intermediates = []
+        for t in progress_bar:
+            # 1. predict noise model_output
+            
+            batch_size = image.size(0)  # Get the batch size
+            t_batch=torch.Tensor((t,)).to(input_noise.device)
+            t_batch = t_batch.unsqueeze(0).expand(batch_size, -1)  # Expand tensor `t` to have the desired batch size
+            t_batch = t_batch.to(image.device)  # Move the tensor to the desired device
+
+            model_output = diffusion_model(
+                image, timesteps=t_batch, context=conditioning
+            )
+
+            # 2. compute previous image: x_t -> x_t-1
+            image, _ = scheduler.step(model_output, t, image)
+            if save_intermediates and t % intermediate_steps == 0:
+                intermediates.append(image)
+        if save_intermediates:
+            return image, intermediates
+        else:
+            return image
+
     @torch.no_grad()
     def get_likelihood(
         self,
