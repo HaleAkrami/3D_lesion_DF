@@ -16,4 +16,7 @@ wandb/
 .ipynb_checkpoints
 # pc_environment.env
 outputlog*
-errorlog*
+errorlog*generative/
+generative/
+models/
+results/
