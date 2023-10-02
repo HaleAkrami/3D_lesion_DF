@@ -96,7 +96,7 @@ def Train(csv,cfg,preload=True):
     h, w, d = tuple(cfg.get('imgDimResize',(160,192,160)))
     for _, sub in csv.iterrows():
        # print(sub.img_path)
-        vol_image = tio.ScalarImage(sub.norm_path, reader=sitk_reader)
+        vol_image = tio.ScalarImage(sub.img_path, reader=sitk_reader)
         # vol_array = vol_image.numpy()
         
         # # Apply custom normalization
@@ -147,7 +147,7 @@ def Eval(csv,cfg):
             print(f'different shapes of vol and mask detected. Shape vol: {tio.ScalarImage(sub.img_path,reader=sitk_reader).shape}, shape mask: {tio.ScalarImage(sub.mask_path,reader=sitk_reader).shape} \nsamples will be resampled to the same dimension')
 
 
-        vol_image = tio.ScalarImage(sub.norm_path, reader=sitk_reader)
+        vol_image = tio.ScalarImage(sub.img_path, reader=sitk_reader)
         # vol_array = vol_image.numpy()
         
         # # Apply custom normalization
