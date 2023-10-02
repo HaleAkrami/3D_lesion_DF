@@ -86,7 +86,7 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['./combined_4datasets.csv']
+csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
 csvpath_val = '/acmenas/hakrami/3D_lesion_DF/splits/IXI_train_fold0.csv'
 csvpath_test = '/acmenas/hakrami/3D_lesion_DF/splits/Brats21_sub_test.csv'
@@ -112,7 +112,7 @@ var_csv['test'] = pd.read_csv(csvpath_test)
 
 for state in states:
     var_csv[state]['settype'] = state
-    var_csv[state]['norm_path'] = pathBase  + var_csv[state]['norm_path']
+    var_csv[state]['norm_path'] = None
     var_csv[state]['img_path'] = pathBase  + var_csv[state]['img_path']
     var_csv[state]['mask_path'] = pathBase  + var_csv[state]['mask_path']
     if state != 'test':
@@ -224,7 +224,7 @@ val_epoch_loss_list = []
 
 scaler = GradScaler()
 total_start = time.time()
-n_epochs = config.get('n_epochs',1000)
+n_epochs = config.get('n_epochs',500)
 val_interval =config.get('val_interval',25)
 
 wandb.watch(model, log_freq=100)
@@ -237,9 +237,18 @@ for epoch in range(n_epochs):
     for step, batch in progress_bar:
        # images = batch["image"].to(device)
         images = batch['vol']['data'].to(device)
-        images  = torch.rand(1).item()* images
-        optimizer.zero_grad(set_to_none=True)
+        
+        # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
+        peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+        # Move both tensors to the device
+        peak_expanded = peak_expanded.to(device)
 
+        # Perform the division
+        images = (images / peak_expanded)
+        #images  = torch.rand(1).item()* images
+
+
+        optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             # Generate random noise
             noise = torch.randn_like(images).to(device)
@@ -271,6 +280,13 @@ for epoch in range(n_epochs):
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch['vol']['data'].to(device)
+            peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+            # Move both tensors to the device
+            peak_expanded = peak_expanded.to(device)
+
+            # Perform the division
+            images = (images / peak_expanded)
+
             noise = torch.randn_like(images).to(device)
             with torch.no_grad():
                 with autocast(enabled=True):

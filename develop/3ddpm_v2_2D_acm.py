@@ -1,4 +1,4 @@
-# %%
+git # %%
 import wandb
 wandb.init(project='2d_ddpm_bio',name='biobank')
 import wandb
@@ -207,8 +207,7 @@ for epoch in range(n_epochs):
     progress_bar.set_description(f"Epoch {epoch}")
     for step, batch in progress_bar:
        # images = batch["image"].to(device)
-        images = batch['vol']['data'].to(device)
-        images = images[:,0,:,:,:]
+        images = batch['vol']['data'].to(device)[:,0,:,:,:]
         optimizer.zero_grad(set_to_none=True)
 
         with autocast(enabled=True):
@@ -240,8 +239,7 @@ for epoch in range(n_epochs):
         model.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
-            images = batch['vol']['data'].to(device)
-            images = images[:,0,:,:,:]
+            images = batch['vol']['data'].to(device)[:,0,:,:,:]
             noise = torch.randn_like(images).to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
@@ -260,12 +258,7 @@ for epoch in range(n_epochs):
 
         # Sampling image during training
         #80, 96, 80
-<<<<<<< HEAD:3ddpm_v2_2D_acm.py
         image = torch.randn_like(images[0:1,:,:,:]) 
-=======
-        images = batch['vol']['data'].to(device)
-        images = images[:,0,:,:,:]
->>>>>>> 5530b040d5bdeb600b69b8b4bfeda1fcebce9c21:develop/3ddpm_v2_2D.py
         image = image.to(device)
         scheduler.set_timesteps(num_inference_steps=1000)
         with autocast(enabled=True):
