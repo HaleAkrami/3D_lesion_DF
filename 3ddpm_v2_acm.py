@@ -1,8 +1,7 @@
 # %%
 import wandb
-wandb.init(project='ddpm_3q',name='25_masked')
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
+wandb.init(project='33_ddpm_4d',name='note_half_4d')
+import wandb
 
 
 # Standard libraries
@@ -55,19 +54,19 @@ from tqdm import tqdm
 
 # Custom modules
 from generative.inferers import DiffusionInferer
-from generative.networks.nets import DiffusionModelUNet_2Q
+from generative.networks.nets import DiffusionModelUNet
 from generative.networks.schedulers import DDPMScheduler, DDIMScheduler
 
 # Weights and Biases for experiment tracking
 from dataloader import Train,Eval
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
 
 
 
 
 config = {
-    'batch_size': 32,
+    'batch_size': 64,
     'imgDimResize':(160,192,160),
     'imgDimPad': (208, 256, 208),
     'spatialDims': '3D',
@@ -99,11 +98,9 @@ df_list = []
 for csvpath in csvpath_trains:
     df = pd.read_csv(csvpath)
     df_list.append(df)
-
-# dfffff=  pd.concat(df_list, ignore_index=True)
-# dfffff.to_csv("./combined.csv", index=False)
-
 # %%
+
+
 var_csv['train'] =pd.concat(df_list, ignore_index=True)
 var_csv['val'] = pd.read_csv(csvpath_val)
 var_csv['test'] = pd.read_csv(csvpath_test)
@@ -112,7 +109,7 @@ var_csv['test'] = pd.read_csv(csvpath_test)
 
 for state in states:
     var_csv[state]['settype'] = state
-    var_csv[state]['norm_path'] = None
+    var_csv[state]['norm_path'] = ''
     var_csv[state]['img_path'] = pathBase  + var_csv[state]['img_path']
     var_csv[state]['mask_path'] = pathBase  + var_csv[state]['mask_path']
     if state != 'test':
@@ -138,12 +135,12 @@ train_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shu
 val_loader = DataLoader(data_val, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
 
 #data_test = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/Brats21_test.csv', converters={'img_path': pd.eval}), config)
-test_loader = DataLoader(data_test, batch_size=config.get('batch_size', 1),shuffle=False,num_workers=8)
+test_loader = DataLoader(data_test, batch_size=config.get('batch_size', 1),shuffle=False,num_workers=16)
 
 
 device = torch.device("cuda")
 
-model = DiffusionModelUNet_2Q(
+model = DiffusionModelUNet(
     spatial_dims=3,
     in_channels=1,
     out_channels=1,
@@ -152,14 +149,16 @@ model = DiffusionModelUNet_2Q(
     num_head_channels=[0, 0, 0,32],
     num_res_blocks=2,
 )
-model_filename = '/acmenas/hakrami/3D_lesion_DF/models/half_3Q_4d/model_epoch324.pt'
+#model_filename = '/acmenas/hakrami/3D_lesion_DF/models/halfres/model_epoch984.pt'
+model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm2/model_epoch624.pt'
+
+
 model.to(device)
 if torch.cuda.device_count() > 1:
     print("Using", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model)
 
-model.load_state_dict(torch.load(model_filename),strict = False)
-
+model.load_state_dict(torch.load(model_filename)) 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
@@ -196,40 +195,6 @@ wandb.watch(model, log_freq=100)
 # val_interval =config.get('val_interval',5)
 
 # %%
-
-
-
-class QuantileLoss(nn.Module):
-    def __init__(self, quantile=0.5, reduction='mean'):
-        super(QuantileLoss, self).__init__()
-        self.quantile = quantile
-        self.reduction = reduction
-
-    def forward(self, preds, target):
-        assert preds.size() == target.size()
-        diff = target - preds
-        loss = torch.where(diff >= 0, self.quantile * diff, (self.quantile - 1) * diff)
-        if self.reduction =='mean':
-            return torch.mean(loss)
-        else:
-            return torch.mean(loss, dim=(1, 2, 3))
-            
-
-quantile_loss_l = QuantileLoss(quantile=0.025)
-quantile_loss_m = QuantileLoss(quantile=0.5)
-quantile_loss_h = QuantileLoss(quantile=0.975)
-
-epoch_loss_list = []
-val_epoch_loss_list = []
-
-scaler = GradScaler()
-total_start = time.time()
-n_epochs = config.get('n_epochs',500)
-val_interval =config.get('val_interval',25)
-
-wandb.watch(model, log_freq=100)
-st =0
-masking = True
 for epoch in range(n_epochs):
     model.train()
     epoch_loss = 0
@@ -237,10 +202,7 @@ for epoch in range(n_epochs):
     progress_bar.set_description(f"Epoch {epoch}")
     for step, batch in progress_bar:
        # images = batch["image"].to(device)
-        
         images = batch['vol']['data'].to(device)
-        
-        
         # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
         peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
         # Move both tensors to the device
@@ -248,10 +210,10 @@ for epoch in range(n_epochs):
 
         # Perform the division
         images = (images / peak_expanded)
-        #images  = torch.rand(1).item()* images
 
 
         optimizer.zero_grad(set_to_none=True)
+
         with autocast(enabled=True):
             # Generate random noise
             noise = torch.randn_like(images).to(device)
@@ -262,18 +224,9 @@ for epoch in range(n_epochs):
             ).long()
 
             # Get model prediction
-            if masking:
-                mask = torch.randn_like(images).to(device)
-                mask[mask<=0.5] = 0
-                mask[mask>0.5] = 1
-                noise = noise*mask
-            else:
-                mask = torch.randn_like(images).to(device)
-                mask[mask>-0.5] = 1
-            prediction,prediction_m,prediction_h = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
-            loss = quantile_loss_l(prediction*mask, images*mask) + quantile_loss_m(prediction*mask, images*mask) + quantile_loss_h(prediction*mask, images*mask)
+            noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
 
-            #loss = F.mse_loss(noise_pred.float(), noise.float())
+            loss = F.mse_loss(noise_pred.float(), noise.float())
 
         scaler.scale(loss).backward()
         scaler.step(optimizer)
@@ -283,8 +236,7 @@ for epoch in range(n_epochs):
 
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
     epoch_loss_list.append(epoch_loss / (step + 1))
-    wandb.log({"loss_train": epoch_loss / (step + 1)},step=epoch)
-
+    wandb.log({"loss_train": epoch_loss / (step + 1)})
 
     if (epoch + 1) % val_interval == 0:
         model.eval()
@@ -297,7 +249,6 @@ for epoch in range(n_epochs):
 
             # Perform the division
             images = (images / peak_expanded)
-
             noise = torch.randn_like(images).to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
@@ -306,61 +257,37 @@ for epoch in range(n_epochs):
                     ).long()
 
                     # Get model prediction
-                    prediction,prediction_m,prediction_h = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
-                    val_loss = quantile_loss_l(prediction, images) + quantile_loss_m(prediction_m, images) + quantile_loss_h(prediction_h, images)
+                    noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
+                    val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
         val_epoch_loss_list.append(val_epoch_loss / (step + 1))
-        wandb.log({"loss_val": val_epoch_loss / (step + 1)},step=epoch)
+        wandb.log({"loss_val": val_epoch_loss / (step + 1)})
 
         # Sampling image during training
         #80, 96, 80
         image = torch.randn_like(images)[0:1,:,:,:]
         image = image.to(device)
-        noise = torch.randn_like(images).to(device)
-        timesteps = torch.randint(
-                        inferer.scheduler.num_train_timesteps-1, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
-                    ).long()
+        scheduler.set_timesteps(num_inference_steps=1000)
         with autocast(enabled=True):
-            prediction,prediction_m,prediction_h = inferer(inputs=image, diffusion_model=model, noise=noise, timesteps=timesteps)
+            image = inferer.sample(input_noise=image, diffusion_model=model, scheduler=scheduler)
 
 
-        middle_slice_idx = int(image.size(-1) // 2)
+        middle_slice_idx = image.size(-1) // 2
         plt.figure(figsize=(2, 2))
-        plt.imshow(prediction_m[0, 0, :, :, middle_slice_idx].detach().cpu().numpy(), vmin=0, vmax=1, cmap="gray")
+        plt.imshow(image[0, 0, :, :, middle_slice_idx].cpu(), vmin=0, vmax=1, cmap="gray")
         plt.tight_layout()
         plt.axis("off")
         plt.show()
-        wandb.log({"sample_image_m": [wandb.Image(plt)]},step=epoch)
-        filename = f"./results/half_norm_3Q_4d/sample_masked_25_epoch{epoch+st}.png"
-        plt.savefig(filename, dpi=300) 
-
-
-        plt.figure(figsize=(2, 2))
-        plt.imshow(prediction[0, 0, :, :, middle_slice_idx].detach().cpu().numpy(), vmin=0, vmax=1, cmap="gray")
-        plt.tight_layout()
-        plt.axis("off")
-        plt.show()
-        wandb.log({"sample_image_l": [wandb.Image(plt)]},step=epoch)
-
-        plt.figure(figsize=(2, 2))
-        plt.imshow(prediction_h[0, 0, :, :, middle_slice_idx].detach().cpu().numpy(), vmin=0, vmax=1, cmap="gray")
-        plt.tight_layout()
-        plt.axis("off")
-        plt.show()
-        wandb.log({"sample_image_h": [wandb.Image(plt)]},step=epoch)
+        wandb.log({"sample_image": [wandb.Image(plt)]})
         # Modify the filename to include the epoch number
-        
+        filename = f"./results/norm3/sample_epoch{epoch}.png"
 
-         
+        plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/half_3Q_4d/model_masked_25_epoch{epoch+st}.pt"
+        model_filename = f"./models/norm3/model_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
-
-total_time = time.time() - total_start
-print(f"train completed, total time: {total_time}.")
-
 
 
 
