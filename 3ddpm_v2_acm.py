@@ -282,11 +282,11 @@ for epoch in range(n_epochs):
         plt.show()
         wandb.log({"sample_image": [wandb.Image(plt)]})
         # Modify the filename to include the epoch number
-        filename = f"./results/norm3/sample_epoch{epoch}.png"
+        filename = f"./results/norm3/sample_large_epoch{epoch}.png"
 
         plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/norm3/model_epoch{epoch}.pt"
+        model_filename = f"./models/halfres/model_large_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 

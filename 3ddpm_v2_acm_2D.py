@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='33_ddpm_large',name='note_half_4d')
+wandb.init(project='2D_ddpm_4d',name='note_half_4d')
 import wandb
 
 
@@ -66,10 +66,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
 
 config = {
-    'batch_size': 8,
+    'batch_size': 64,
     'imgDimResize':(160,192,160),
     'imgDimPad': (208, 256, 208),
-    'spatialDims': '3D',
+    'spatialDims': '2D',
     'unisotropic_sampling': True, 
     'perc_low': 0, 
     'perc_high': 100,
@@ -141,23 +141,24 @@ test_loader = DataLoader(data_test, batch_size=config.get('batch_size', 1),shuff
 device = torch.device("cuda")
 
 model = DiffusionModelUNet(
-    spatial_dims=3,
+    spatial_dims=2,
     in_channels=1,
     out_channels=1,
-    num_channels=[256, 256, 512],
-    attention_levels=[False, False, True],
-    num_head_channels=[0, 0, 512],
+    num_channels=[32, 64, 128, 128],
+    attention_levels=[False, False, False,True],
+    num_head_channels=[0, 0, 0,32],
     num_res_blocks=2,
 )
-model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm3/model_large_epoch349.pt'
-
+#model_filename = '/acmenas/hakrami/3D_lesion_DF/models/halfres/model_epoch984.pt'
+##model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm2/model_epoch624.pt'
 
 
 model.to(device)
 if torch.cuda.device_count() > 1:
     print("Using", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model)
-model.load_state_dict(torch.load(model_filename)) 
+
+#model.load_state_dict(torch.load(model_filename)) 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
@@ -201,24 +202,15 @@ for epoch in range(n_epochs):
     progress_bar.set_description(f"Epoch {epoch}")
     for step, batch in progress_bar:
        # images = batch["image"].to(device)
-        images = batch['vol']['data'].to(device)
+        images = batch['vol']['data'].to(device)[:,0,:,:,:]
         # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
-        peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+        peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3)).long()
         # Move both tensors to the device
         peak_expanded = peak_expanded.to(device)
 
         # Perform the division
         images = (images / peak_expanded)
 
-
-        scaling_factors = 0.75 + torch.rand((images.size(0), 1, 1, 1, 1)) * (1.25 - 0.75)
-
-        # Send the scaling factors to the same device as images
-        scaling_factors = scaling_factors.to(device)
-
-        # Multiply the images by the scaling factors
-        # This uses broadcasting to match the scaling factors' shape to the images' shape
-        images_scaled = images * scaling_factors
 
         optimizer.zero_grad(set_to_none=True)
 
@@ -246,12 +238,12 @@ for epoch in range(n_epochs):
     epoch_loss_list.append(epoch_loss / (step + 1))
     wandb.log({"loss_train": epoch_loss / (step + 1)})
 
-    if (epoch + 1) % val_interval == 0:
+    if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
-            images = batch['vol']['data'].to(device)
-            peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+            images = batch['vol']['data'].to(device)[:,0,:,:,:]
+            peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).long())
             # Move both tensors to the device
             peak_expanded = peak_expanded.to(device)
 
@@ -275,7 +267,7 @@ for epoch in range(n_epochs):
 
         # Sampling image during training
         #80, 96, 80
-        image = torch.randn_like(images)[0:1,:,:,:]
+        image = torch.randn_like(images)[0:1,:,:]
         image = image.to(device)
         scheduler.set_timesteps(num_inference_steps=1000)
         with autocast(enabled=True):
@@ -284,7 +276,7 @@ for epoch in range(n_epochs):
 
         middle_slice_idx = image.size(-1) // 2
         plt.figure(figsize=(2, 2))
-        plt.imshow(image[0, 0, :, :, middle_slice_idx].cpu(), vmin=0, vmax=1, cmap="gray")
+        plt.imshow(image[0, 0, :, :].cpu(), vmin=0, vmax=1, cmap="gray")
         plt.tight_layout()
         plt.axis("off")
         plt.show()
@@ -294,7 +286,7 @@ for epoch in range(n_epochs):
 
         plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/norm3/model_large_epoch{epoch}.pt"
+        model_filename = f"./models/halfres/model_large_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 
