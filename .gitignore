@@ -24,3 +24,14 @@ models/
 results/
 wandb/
 
+*.nii
+*.out
+*.zip
+*.pyc
+*.nii
+*.nii.gz
+*.pyc
+*.pyc
+*.nii.gz
+*.nii
+*.nii

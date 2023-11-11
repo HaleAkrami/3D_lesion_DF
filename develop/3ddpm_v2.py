@@ -161,7 +161,7 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
 
 model.load_state_dict(torch.load(model_filename))
-scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
+scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="cosine", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
 

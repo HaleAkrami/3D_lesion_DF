@@ -8,6 +8,6 @@
 #SBATCH --nodes=1
 eval "$(conda shell.bash hook)"
 conda activate plt-uad
-bash prepare_biobank.sh /scratch1/akrami/Latest_Data/Data_pre/BioBank_val /scratch1/akrami/Latest_Data/Data_T1
+bash prepare_biobank.sh /scratch1/akrami/Latest_Data/Data_pre/BioBank_val /scratch1/akrami/Latest_Data/Data_T1_v2
 
 

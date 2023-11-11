@@ -186,8 +186,9 @@ class DiffusionInferer(Inferer):
             batch_size = image.size(0)  # Get the batch size
             t_batch=torch.Tensor((t,)).to(input_noise.device)
             t_batch = t_batch.unsqueeze(0).expand(batch_size, -1)  # Expand tensor `t` to have the desired batch size
-            t_batch = t_batch.to(image.device)  # Move the tensor to the desired device
+            t_batch = t_batch.to(image.device)[:,0]  # Move the tensor to the desired device
 
+            #print(t_batch.shape)
             model_output = diffusion_model(
                 image, timesteps=t_batch, context=conditioning
             )

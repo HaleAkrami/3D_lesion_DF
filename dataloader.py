@@ -1,5 +1,3 @@
-import wandb
-wandb.init(project='33_ddpm')
 
 
 # Standard libraries
@@ -30,15 +28,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from monai.apps import DecathlonDataset
 from monai.config import print_config
 from monai.data import DataLoader
-from monai.transforms import (
-    AddChanneld, 
-    CenterSpatialCropd, 
-    Compose, 
-    Lambdad, 
-    LoadImaged, 
-    Resized, 
-    ScaleIntensityd
-)
+
 from monai.utils import set_determinism
 
 # Other medical image processing libraries
@@ -180,6 +170,45 @@ def Eval(csv,cfg):
 
 
 
+def Eval_sim(csv,cfg): 
+    subjects = []
+    for _, sub in csv.iterrows():
+        if sub.mask_path is not None and tio.ScalarImage(sub.img_path,reader=sitk_reader).shape != tio.ScalarImage(sub.mask_path,reader=sitk_reader).shape:
+            print(f'different shapes of vol and mask detected. Shape vol: {tio.ScalarImage(sub.img_path,reader=sitk_reader).shape}, shape mask: {tio.ScalarImage(sub.mask_path,reader=sitk_reader).shape} \nsamples will be resampled to the same dimension')
+
+
+        vol_image = tio.ScalarImage(sub.img_path, reader=sitk_reader)
+        # vol_array = vol_image.numpy()
+        
+        # # Apply custom normalization
+        # normalized_vol_array, peak = normalize_by_peak(vol_array)
+        
+        # # Get spacing information
+        # spacing = vol_image.spacing
+
+        # # Convert back to ScalarImage
+        # normalized_vol_image = tio.ScalarImage(tensor=normalized_vol_array, spacing=spacing)
+
+        
+        # Apply histogram normalization here
+        #vol_image = apply_hist_norm(vol_image)
+        subject_dict = {
+            'vol': vol_image,
+            'peak': sub.peak,  # Store the peak value
+            'seg' : tio.LabelMap(sub.seg_path, reader=sitk_reader, type=tio.LABEL),
+            'seg_small' : tio.LabelMap(sub.seg_path_init, reader=sitk_reader, type=tio.LABEL),
+            'age' : sub.age,
+            'ID' : sub.img_name,
+            'path' : sub.img_path,
+            'path_normal' : tio.ScalarImage(sub.healthy, reader=sitk_reader)
+        }
+        if sub.mask_path != None: # if we have masks
+            subject_dict['mask'] = tio.LabelMap(sub.mask_path,reader=sitk_reader)
+
+        subject = tio.Subject(subject_dict)
+        subjects.append(subject)
+    ds = tio.SubjectsDataset(subjects, transform = get_eval_transform(cfg))
+    return ds
 
 
 
