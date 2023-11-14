@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='33_ddpm_4d',name='note_half_4d')
+wandb.init(project='ddpm_3D',name='3layers')
 import wandb
 
 
@@ -66,7 +66,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
 
 config = {
-    'batch_size': 64,
+    'batch_size': 16,
     'imgDimResize':(160,192,160),
     'imgDimPad': (208, 256, 208),
     'spatialDims': '3D',
@@ -87,8 +87,8 @@ imgpath = {}
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
 csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
-csvpath_val = '/acmenas/hakrami/3D_lesion_DF/splits/IXI_train_fold0.csv'
-csvpath_test = '/acmenas/hakrami/3D_lesion_DF/splits/Brats21_sub_test.csv'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_val_fold0.csv'
+csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -144,13 +144,13 @@ model = DiffusionModelUNet(
     spatial_dims=3,
     in_channels=1,
     out_channels=1,
-    num_channels=[32, 64, 128, 128],
-    attention_levels=[False, False, False,True],
-    num_head_channels=[0, 0, 0,32],
+    num_channels=[32, 64, 64],
+    attention_levels=[False, False,True],
+    num_head_channels=[0, 0,32],
     num_res_blocks=2,
 )
 #model_filename = '/acmenas/hakrami/3D_lesion_DF/models/halfres/model_epoch984.pt'
-model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm2/model_epoch624.pt'
+#model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm2/model_epoch624.pt'
 
 
 model.to(device)
@@ -158,7 +158,7 @@ if torch.cuda.device_count() > 1:
     print("Using", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model)
 
-model.load_state_dict(torch.load(model_filename)) 
+#model.load_state_dict(torch.load(model_filename)) 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
@@ -203,6 +203,7 @@ for epoch in range(n_epochs):
     for step, batch in progress_bar:
        # images = batch["image"].to(device)
         images = batch['vol']['data'].to(device)
+        images[images<0.01]=0
         # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
         peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
         # Move both tensors to the device
@@ -211,6 +212,15 @@ for epoch in range(n_epochs):
         # Perform the division
         images = (images / peak_expanded)
 
+
+        scaling_factors = 0.75 + torch.rand((images.size(0), 1, 1, 1, 1)) * (1.25 - 0.75)
+
+        # Send the scaling factors to the same device as images
+        scaling_factors = scaling_factors.to(device)
+
+        # Multiply the images by the scaling factors
+        # This uses broadcasting to match the scaling factors' shape to the images' shape
+        images_scaled = images * scaling_factors
 
         optimizer.zero_grad(set_to_none=True)
 
@@ -243,6 +253,7 @@ for epoch in range(n_epochs):
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch['vol']['data'].to(device)
+            images[images<0.01]=0
             peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
             # Move both tensors to the device
             peak_expanded = peak_expanded.to(device)
@@ -282,11 +293,11 @@ for epoch in range(n_epochs):
         plt.show()
         wandb.log({"sample_image": [wandb.Image(plt)]})
         # Modify the filename to include the epoch number
-        filename = f"./results/norm3/sample_large_epoch{epoch}.png"
+        #filename = f"./results/norm3/sample_large_epoch{epoch}.png"
 
-        plt.savefig(filename, dpi=300)  
+        #plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/halfres/model_large_epoch{epoch}.pt"
+        model_filename = f"./models/small_net/model_large_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 

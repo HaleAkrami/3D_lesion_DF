@@ -694,7 +694,7 @@ class LatentDiffusionInferer(DiffusionInferer):
             condition: conditioning for network input.
         """
         with torch.no_grad():
-            latent = autoencoder_model.encode_stage_2_inputs(inputs) * self.scale_factor
+            latent = autoencoder_model.module.encode_stage_2_inputs(inputs) * self.scale_factor
 
         prediction = super().__call__(
             inputs=latent, diffusion_model=diffusion_model, noise=noise, timesteps=timesteps, condition=condition
@@ -740,12 +740,12 @@ class LatentDiffusionInferer(DiffusionInferer):
         else:
             latent = outputs
 
-        image = autoencoder_model.decode_stage_2_outputs(latent / self.scale_factor)
+        image = autoencoder_model.module.decode_stage_2_outputs(latent / self.scale_factor)
 
         if save_intermediates:
             intermediates = []
             for latent_intermediate in latent_intermediates:
-                intermediates.append(autoencoder_model.decode_stage_2_outputs(latent_intermediate / self.scale_factor))
+                intermediates.append(autoencoder_model.module.decode_stage_2_outputs(latent_intermediate / self.scale_factor))
             return image, intermediates
 
         else:
