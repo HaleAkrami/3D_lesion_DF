@@ -63,7 +63,7 @@ from generative.networks.schedulers import DDPMScheduler
 
 # Weights and Biases for experiment tracking
 from dataloader import Train,Eval
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3,5,6,7"
 
 
 
