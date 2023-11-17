@@ -44,7 +44,7 @@ sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
 wandb.init(project='3D_ddpm',name='test_inpaint')
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
 config = {
@@ -112,7 +112,7 @@ data_val = Train(var_csv['val'],config)
 data_test = Eval(var_csv['test'],config)
 
 
-val_loader = DataLoader(data_val, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
+val_loader = DataLoader(data_val, batch_size=config.get('batch_size', 1),shuffle=False,num_workers=8)
 test_loader = DataLoader(data_test, batch_size=1,shuffle=False,num_workers=8)
 
 device = torch.device("cuda")
@@ -156,44 +156,51 @@ def denoise(noised_img,sample_time,scheduler,inferer,model):
     
 
 
-def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device, num_inference_steps=999, timesteps=999, num_resample_steps=5):
+def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
     # Convert inputs to tensors and move to the specified device
     
-    val_image_inpainted = mean_denoised
+    mask = mask.to(device)
+    val_image_masked = image_array.to(device)
+    val_image_inpainted = torch.randn_like(val_image_masked).to(device)
+    timesteps = torch.Tensor((999,)).to(device).long()
+    scheduler.set_timesteps(num_inference_steps=999)
+    progress_bar = tqdm.tqdm(scheduler.timesteps)
 
-    # Initial masked and inpainted images
-    val_image_masked = image_array * (1 - mask) 
-
-    # Set scheduler timesteps
-    scheduler.set_timesteps(num_inference_steps=num_inference_steps)
-
-    # Inpainting loop
-    progress_bar = tqdm.tqdm(reversed(range(timesteps)))
+    num_resample_steps = 4
     with torch.no_grad():
         with autocast(enabled=True):
             for t in progress_bar:
-                for _ in range(num_resample_steps):
-                    # Get the known portion at t-1
+                for u in range(num_resample_steps):
+                # get the known portion at t-1
                     if t > 0:
-                        noise = torch.randn_like(image_array).to(device)
-                        timesteps_prev = torch.Tensor([t - 1]).to(device).long()
+                        noise =  torch.randn_like(val_image_masked).to(device)
+                        timesteps_prev = torch.Tensor((t - 1,)).to(device).long()
                         val_image_inpainted_prev_known = scheduler.add_noise(
                             original_samples=val_image_masked, noise=noise, timesteps=timesteps_prev
                         )
                     else:
                         val_image_inpainted_prev_known = val_image_masked
-
-                    # Perform a denoising step to get the unknown portion at t-1
+                
+                # perform a denoising step to get the unknown portion at t-1
                     if t > 0:
-                        timesteps_tensor = torch.Tensor([t]).to(device).long()
-                        model_output = model(val_image_inpainted, timesteps=timesteps_tensor)
+                        timesteps = torch.Tensor((t,)).to(device).long()
+                        model_output = model(val_image_inpainted, timesteps=timesteps)
                         val_image_inpainted_prev_unknown, _ = scheduler.step(model_output, t, val_image_inpainted)
 
-                    # Combine known and unknown using the mask
+                    # combine known and unknown using the mask
                     val_image_inpainted = torch.where(
-                        mask == 0, val_image_inpainted_prev_known, val_image_inpainted_prev_unknown
+                        mask == 1, val_image_inpainted_prev_known, val_image_inpainted_prev_unknown
                     )
 
+                    # perform resampling
+                    if t > 0 and u < (num_resample_steps - 1):
+                        # sample x_t from x_t-1
+                        noise = torch.randn_like(val_image_masked).to(device)
+                        val_image_inpainted = (
+                            torch.sqrt(1 - scheduler.betas[t - 1]) * val_image_inpainted
+                            + torch.sqrt(scheduler.betas[t - 1]) * noise
+                        )
+    
     return val_image_inpainted
 
 sample_time = 500
@@ -217,15 +224,16 @@ for step, batch in progress_bar:
     ssim_loss = MaskedLoss(SSIMLoss,spatial_dims=3, data_range=data_range)
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
+
+
     center = [dim // 2 for dim in images.shape[2:]]  # Calculate center indices
-    cube_size = 10  # Half-size of the cube
+    cube_size = 20  # Half-size of the cube
     mask = torch.ones_like(images)
     mask[:, :, center[0]-cube_size:center[0]+cube_size, center[1]-cube_size:center[1]+cube_size, center[2]-cube_size:center[2]+cube_size] = 0
     masked_image = images * mask
 
     noise = torch.randn_like(images)
-    inpainted_image = inpaint_image(images, mask, noise, model, scheduler, device,
-                   num_inference_steps=999, timesteps=999, num_resample_steps=5)
+    inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
     ssim_val =1- ssim_loss(images, inpainted_image,mask)
     mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
@@ -235,7 +243,7 @@ for step, batch in progress_bar:
                                               center[1]-cube_size:center[1]+cube_size,
                                               center[2]-cube_size:center[2]+cube_size])
     all_ssim_values.append(ssim_val.item())
-    all_mse.append()
+    all_mse.append(mse_val.item())
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
     axes[0, 0].imshow(images[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
@@ -244,10 +252,10 @@ for step, batch in progress_bar:
     axes[0, 1].imshow(masked_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(inpaint_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].imshow(inpainted_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - inpaint_image)
+    error = torch.abs(images - inpainted_image)
     axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     

@@ -1,30 +1,0 @@
-==========================================
-SLURM_JOB_ID = 15271862
-SLURM_JOB_NODELIST = b10-13
-TMPDIR = /tmp/SLURM_15271862
-==========================================
-Resample
-(-i / --img-dir) argument needs to be a directory of NIfTI images.
-mv: cannot stat '/scratch1/akrami/Data_patch_v2/v1resampled/IXI/t2/*': No such file or directory
-Generate masks
-
-########################
-If you are using hd-bet, please cite the following paper:
-Isensee F, Schell M, Tursunova I, Brugnara G, Bonekamp D, Neuberger U, Wick A, Schlemmer HP, Heiland S, Wick W,Bendszus M, Maier-Hein KH, Kickingereder P. Automated brain extraction of multi-sequence MRI using artificialneural networks. arXiv preprint arXiv:1901.11341, 2019.
-########################
-
-Traceback (most recent call last):
-  File "/home1/akrami/.conda/envs/plt-uad/bin/hd-bet", line 7, in <module>
-    exec(compile(f.read(), __file__, 'exec'))
-  File "/project/ajoshi_27/akrami/HD-BET/HD_BET/hd-bet", line 81, in <module>
-    raise RuntimeError("input is a folder but no nifti files (.nii.gz) were found in here")
-RuntimeError: input is a folder but no nifti files (.nii.gz) were found in here
-Register t2
-0it [00:00, ?it/s]0it [00:00, ?it/s]
-Cut to brain
-0it [00:00, ?it/s]0it [00:00, ?it/s]
-local variable 'max_dims' referenced before assignment
-Bias Field Correction
-0it [00:00, ?it/s]0it [00:00, ?it/s]
-cp: cannot stat '/scratch1/akrami/Data_patch_v2/v3registered_non_iso_cut/IXI/mask/*': No such file or directory
-Done

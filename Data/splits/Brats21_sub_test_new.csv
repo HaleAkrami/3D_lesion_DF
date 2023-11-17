@@ -1,0 +1,101 @@
+Unnamed: 0,img_name,Cohort Name (if publicly available),Site No (represents the originating institution),Local ID ,age,label,img_path,mask_path,seg_path,norm_path,peak
+653,BraTS2021_01151,Private Collection,4,,,1,/Test/Brats21/t1/BraTS2021_01151_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01151_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01151_seg.nii.gz,,1919.0382080078125
+488,BraTS2021_01265,Private Collection,1,,85.942,1,/Test/Brats21/t1/BraTS2021_01265_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01265_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01265_seg.nii.gz,,710.962322998047
+92,BraTS2021_00588,IvyGAP,16,W48,57.0,1,/Test/Brats21/t1/BraTS2021_00588_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00588_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00588_seg.nii.gz,,744.298095703125
+334,BraTS2021_01048,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01048_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01048_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01048_seg.nii.gz,,1044.9182250976562
+510,BraTS2021_01295,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01295_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01295_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01295_seg.nii.gz,,527.212646484375
+219,BraTS2021_00310,Private Collection,1,,63.764,1,/Test/Brats21/t1/BraTS2021_00310_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00310_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00310_seg.nii.gz,,902.8078125
+1030,BraTS2021_00640,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00640_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00640_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00640_seg.nii.gz,,8613.39404296875
+815,BraTS2021_01492,TCGA-LGG,13,TCGA-DU-6404,,1,/Test/Brats21/t1/BraTS2021_01492_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01492_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01492_seg.nii.gz,,643.9127685546875
+57,BraTS2021_00806,Private Collection,21,,,1,/Test/Brats21/t1/BraTS2021_00806_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00806_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00806_seg.nii.gz,,693.6665954589844
+694,BraTS2021_01660,Private Collection,4,,60.0,1,/Test/Brats21/t1/BraTS2021_01660_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01660_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01660_seg.nii.gz,,2371.5876953125
+456,BraTS2021_01233,Private Collection,1,,66.074,1,/Test/Brats21/t1/BraTS2021_01233_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01233_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01233_seg.nii.gz,,957.4709716796876
+1175,BraTS2021_01582,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01582_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01582_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01582_seg.nii.gz,,734.580859375
+1137,BraTS2021_01544,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01544_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01544_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01544_seg.nii.gz,,17476.783789062498
+411,BraTS2021_01125,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01125_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01125_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01125_seg.nii.gz,,498.2128204345703
+199,BraTS2021_00285,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00285_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00285_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00285_seg.nii.gz,,727.8928833007812
+9,BraTS2021_00445,CPTAC-GBM,20,C3L-01043,,1,/Test/Brats21/t1/BraTS2021_00445_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00445_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00445_seg.nii.gz,,802.88271484375
+407,BraTS2021_01121,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01121_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01121_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01121_seg.nii.gz,,795.8646972656251
+205,BraTS2021_00292,Private Collection,1,,44.416,1,/Test/Brats21/t1/BraTS2021_00292_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00292_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00292_seg.nii.gz,,1505.9539916992187
+807,BraTS2021_01484,TCGA-LGG,12,TCGA-CS-6666,,1,/Test/Brats21/t1/BraTS2021_01484_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01484_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01484_seg.nii.gz,,2935.066552734375
+958,BraTS2021_00502,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00502_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00502_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00502_seg.nii.gz,,5035.48291015625
+477,BraTS2021_01254,Private Collection,1,,86.274,1,/Test/Brats21/t1/BraTS2021_01254_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01254_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01254_seg.nii.gz,,556.814306640625
+562,BraTS2021_01353,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01353_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01353_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01353_seg.nii.gz,,1423.7393188476562
+1243,BraTS2021_01650,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01650_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01650_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01650_seg.nii.gz,,1413.91826171875
+944,BraTS2021_00480,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00480_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00480_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00480_seg.nii.gz,,2679.78076171875
+607,BraTS2021_01398,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01398_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01398_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01398_seg.nii.gz,,873.3224853515626
+195,BraTS2021_00281,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00281_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00281_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00281_seg.nii.gz,,1042.53515625
+147,BraTS2021_00210,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00210_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00210_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00210_seg.nii.gz,,916.1719055175781
+1016,BraTS2021_00619,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00619_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00619_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00619_seg.nii.gz,,4219.6796875
+254,BraTS2021_00359,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00359_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00359_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00359_seg.nii.gz,,861.4351196289062
+13,BraTS2021_00451,CPTAC-GBM,20,C3L-00677,,1,/Test/Brats21/t1/BraTS2021_00451_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00451_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00451_seg.nii.gz,,2277.73369140625
+297,BraTS2021_00419,Private Collection,1,,45.575,1,/Test/Brats21/t1/BraTS2021_00419_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00419_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00419_seg.nii.gz,,1594.242919921875
+27,BraTS2021_01017,CPTAC-GBM,20,C3L-00528,,1,/Test/Brats21/t1/BraTS2021_01017_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01017_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01017_seg.nii.gz,,5638.420703125
+211,BraTS2021_00299,Private Collection,1,,67.677,1,/Test/Brats21/t1/BraTS2021_00299_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00299_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00299_seg.nii.gz,,530.8708984375
+1202,BraTS2021_01609,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01609_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01609_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01609_seg.nii.gz,,394.6226165771484
+671,BraTS2021_01183,Private Collection,4,,,1,/Test/Brats21/t1/BraTS2021_01183_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01183_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01183_seg.nii.gz,,2335.3408203125
+1092,BraTS2021_00735,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00735_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00735_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00735_seg.nii.gz,,6449.653564453125
+516,BraTS2021_01307,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01307_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01307_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01307_seg.nii.gz,,400.1053344726563
+750,BraTS2021_01281,TCGA-GBM,5,TCGA-02-0034,60.729,1,/Test/Brats21/t1/BraTS2021_01281_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01281_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01281_seg.nii.gz,,2062.489306640625
+788,BraTS2021_01465,TCGA-GBM,7,TCGA-08-0512,48.825,1,/Test/Brats21/t1/BraTS2021_01465_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01465_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01465_seg.nii.gz,,481.162353515625
+784,BraTS2021_01461,TCGA-GBM,7,TCGA-08-0389,59.282,1,/Test/Brats21/t1/BraTS2021_01461_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01461_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01461_seg.nii.gz,,323.45078125
+270,BraTS2021_00383,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00383_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00383_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00383_seg.nii.gz,,1289.4091796875
+1110,BraTS2021_00765,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00765_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00765_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00765_seg.nii.gz,,3935.1115234374997
+1073,BraTS2021_00706,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00706_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00706_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00706_seg.nii.gz,,4671.725537109375
+863,BraTS2021_01666,TCGA-LGG,15,TCGA-HT-A61A,,1,/Test/Brats21/t1/BraTS2021_01666_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01666_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01666_seg.nii.gz,,2273.7229980468746
+593,BraTS2021_01384,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01384_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01384_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01384_seg.nii.gz,,883.7539489746093
+1020,BraTS2021_00623,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00623_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00623_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00623_seg.nii.gz,,4831.79833984375
+876,BraTS2021_00012,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00012_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00012_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00012_seg.nii.gz,,1822.3253173828125
+391,BraTS2021_01105,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01105_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01105_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01105_seg.nii.gz,,650.1558837890625
+1240,BraTS2021_01647,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01647_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01647_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01647_seg.nii.gz,,1363.8338623046875
+879,BraTS2021_00017,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00017_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00017_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00017_seg.nii.gz,,1530.54248046875
+182,BraTS2021_00260,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00260_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00260_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00260_seg.nii.gz,,465.25971679687495
+585,BraTS2021_01376,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01376_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01376_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01376_seg.nii.gz,,1186.8275573730468
+168,BraTS2021_00239,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00239_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00239_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00239_seg.nii.gz,,696.8979919433594
+275,BraTS2021_00390,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00390_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00390_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00390_seg.nii.gz,,791.781170654297
+1058,BraTS2021_00685,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00685_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00685_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00685_seg.nii.gz,,5115.843017578125
+515,BraTS2021_01306,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01306_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01306_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01306_seg.nii.gz,,1996.32275390625
+769,BraTS2021_01446,TCGA-GBM,6,TCGA-06-0185,,1,/Test/Brats21/t1/BraTS2021_01446_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01446_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01446_seg.nii.gz,,714.90380859375
+1168,BraTS2021_01575,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01575_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01575_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01575_seg.nii.gz,,2361.248461914063
+773,BraTS2021_01450,TCGA-GBM,6,TCGA-06-0238,46.677,1,/Test/Brats21/t1/BraTS2021_01450_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01450_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01450_seg.nii.gz,,2434.1517333984375
+81,BraTS2021_00576,IvyGAP,16,W22,,1,/Test/Brats21/t1/BraTS2021_00576_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00576_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00576_seg.nii.gz,,4261.673120117188
+155,BraTS2021_00220,Private Collection,1,,49.641,1,/Test/Brats21/t1/BraTS2021_00220_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00220_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00220_seg.nii.gz,,1044.2441894531248
+1117,BraTS2021_00777,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00777_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00777_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00777_seg.nii.gz,,6428.618701171875
+851,BraTS2021_01528,TCGA-LGG,15,TCGA-HT-7473,,1,/Test/Brats21/t1/BraTS2021_01528_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01528_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01528_seg.nii.gz,,8813.112890625
+626,BraTS2021_01417,priorToBraTS2017,17,brats_2013_pat0007_1_HGG,,1,/Test/Brats21/t1/BraTS2021_01417_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01417_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01417_seg.nii.gz,,1690.25390625
+1124,BraTS2021_01155,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01155_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01155_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01155_seg.nii.gz,,2448.1912109375
+109,BraTS2021_00131,Private Collection,1,,39.068,1,/Test/Brats21/t1/BraTS2021_00131_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00131_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00131_seg.nii.gz,,844.60546875
+1176,BraTS2021_01583,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01583_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01583_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01583_seg.nii.gz,,1134.3348999023438
+468,BraTS2021_01245,Private Collection,1,,68.726,1,/Test/Brats21/t1/BraTS2021_01245_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01245_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01245_seg.nii.gz,,410.24299926757817
+662,BraTS2021_01174,Private Collection,4,,,1,/Test/Brats21/t1/BraTS2021_01174_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01174_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01174_seg.nii.gz,,2462.5215820312496
+658,BraTS2021_01170,Private Collection,4,,,1,/Test/Brats21/t1/BraTS2021_01170_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01170_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01170_seg.nii.gz,,2783.648046875
+104,BraTS2021_01029,Private Collection,22,,,1,/Test/Brats21/t1/BraTS2021_01029_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01029_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01029_seg.nii.gz,,1635.9122314453125
+957,BraTS2021_00501,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00501_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00501_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00501_seg.nii.gz,,7749.282128906249
+541,BraTS2021_01332,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01332_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01332_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01332_seg.nii.gz,,3344.00830078125
+395,BraTS2021_01109,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01109_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01109_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01109_seg.nii.gz,,660.1511840820312
+850,BraTS2021_01527,TCGA-LGG,14,TCGA-FG-A4MT,,1,/Test/Brats21/t1/BraTS2021_01527_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01527_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01527_seg.nii.gz,,1258.1948730468748
+114,BraTS2021_00157,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00157_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00157_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00157_seg.nii.gz,,590.2904663085938
+335,BraTS2021_01049,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01049_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01049_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01049_seg.nii.gz,,901.635693359375
+74,BraTS2021_00568,IvyGAP,16,W9,50.0,1,/Test/Brats21/t1/BraTS2021_00568_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00568_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00568_seg.nii.gz,,2041.2646484375
+163,BraTS2021_00234,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_00234_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00234_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00234_seg.nii.gz,,1042.936193847656
+101,BraTS2021_00599,IvyGAP,16,W2,64.0,1,/Test/Brats21/t1/BraTS2021_00599_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00599_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00599_seg.nii.gz,,7444.9875
+745,BraTS2021_01142,TCGA-GBM,11,TCGA-76-6657,74.907,1,/Test/Brats21/t1/BraTS2021_01142_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01142_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01142_seg.nii.gz,,987.5680664062501
+988,BraTS2021_00544,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00544_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00544_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00544_seg.nii.gz,,5533.400390625
+991,BraTS2021_00548,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00548_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00548_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00548_seg.nii.gz,,1950.988671875
+102,BraTS2021_00118,Private Collection,22,,,1,/Test/Brats21/t1/BraTS2021_00118_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00118_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00118_seg.nii.gz,,853.2463073730469
+1145,BraTS2021_01552,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01552_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01552_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01552_seg.nii.gz,,2421.6078125
+780,BraTS2021_01457,TCGA-GBM,7,TCGA-08-0356,60.0,1,/Test/Brats21/t1/BraTS2021_01457_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01457_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01457_seg.nii.gz,,985.9204345703126
+738,BraTS2021_01003,TCGA-GBM,5,TCGA-02-0011,18.975,1,/Test/Brats21/t1/BraTS2021_01003_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01003_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01003_seg.nii.gz,,540.5625610351562
+960,BraTS2021_00505,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00505_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00505_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00505_seg.nii.gz,,4066.9813476562504
+449,BraTS2021_01226,Private Collection,1,,46.666,1,/Test/Brats21/t1/BraTS2021_01226_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01226_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01226_seg.nii.gz,,868.0197265625
+1241,BraTS2021_01648,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01648_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01648_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01648_seg.nii.gz,,336.4078704833984
+956,BraTS2021_00500,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00500_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00500_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00500_seg.nii.gz,,5725.5146484375
+805,BraTS2021_01482,TCGA-LGG,12,TCGA-CS-6188,,1,/Test/Brats21/t1/BraTS2021_01482_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01482_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01482_seg.nii.gz,,17316.568359375
+10,BraTS2021_00446,CPTAC-GBM,20,C3L-01156,,1,/Test/Brats21/t1/BraTS2021_00446_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00446_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00446_seg.nii.gz,,4820.058984374999
+604,BraTS2021_01395,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01395_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01395_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01395_seg.nii.gz,,572.2493835449219
+1040,BraTS2021_00655,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00655_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00655_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00655_seg.nii.gz,,4922.710400390625
+1222,BraTS2021_01629,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01629_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01629_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01629_seg.nii.gz,,2182.694921875
+532,BraTS2021_01323,Private Collection,1,,,1,/Test/Brats21/t1/BraTS2021_01323_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01323_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01323_seg.nii.gz,,731.06220703125
+1245,BraTS2021_01652,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_01652_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01652_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01652_seg.nii.gz,,4380.75380859375
+30,BraTS2021_01020,CPTAC-GBM,20,C3L-01046,,1,/Test/Brats21/t1/BraTS2021_01020_t1.nii.gz,/Test/Brats21/mask/BraTS2021_01020_mask.nii.gz,/Test/Brats21/seg/BraTS2021_01020_seg.nii.gz,,434.23857421875
+1066,BraTS2021_00693,Private Collection,18,,,1,/Test/Brats21/t1/BraTS2021_00693_t1.nii.gz,/Test/Brats21/mask/BraTS2021_00693_mask.nii.gz,/Test/Brats21/seg/BraTS2021_00693_seg.nii.gz,,8095.18671875

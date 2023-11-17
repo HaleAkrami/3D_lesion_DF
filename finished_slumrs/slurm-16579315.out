@@ -1,9 +1,0 @@
-==========================================
-SLURM_JOB_ID = 16579315
-SLURM_JOB_NODELIST = d13-09
-TMPDIR = /tmp/SLURM_16579315
-==========================================
-  File "/project/ajoshi_27/akrami/3D_lesion_DF/3d_ddpm.py", line 70
-    'n_epochs' = 1000,
-               ^
-SyntaxError: invalid syntax

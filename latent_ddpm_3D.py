@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='latent_ddpm_4d',name='note_half_4d')
+wandb.init(project='latent_ddpm_3D',name='small_3D')
 import wandb
 
 
@@ -63,7 +63,7 @@ from generative.networks.schedulers import DDPMScheduler
 
 # Weights and Biases for experiment tracking
 from dataloader import Train,Eval
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3,5,6,7"
 
 
 
@@ -148,10 +148,11 @@ autoencoder = AutoencoderKL(
     spatial_dims=3,
     in_channels=1,
     out_channels=1,
-    num_channels=(32, 64, 128,128),
-    attention_levels=(False, False, False,True),
+    num_channels=(32, 64, 64),
+    latent_channels=3,
+    num_res_blocks=1,
     norm_num_groups=16,
-    num_res_blocks=2,
+    attention_levels=(False, False, True),
 )
 
 
@@ -172,7 +173,7 @@ if torch.cuda.device_count() > 1:
     autoencoder = nn.DataParallel(autoencoder)
 
  
-model_filename = '/acmenas/hakrami/3D_lesion_DF/models/norm3/model_KL_epoch499.pt'
+model_filename = '/acmenas/hakrami/3D_lesion_DF/models/latent_3D/model_KL_epoch449.pt'
 autoencoder.load_state_dict(torch.load(model_filename))
 
 
@@ -220,6 +221,7 @@ for epoch in range(n_epochs):
         optimizer_diff.zero_grad(set_to_none=True)
        # images = batch["image"].to(device)
         images = batch['vol']['data'].to(device)
+        images[images<0.01]=0
         # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
         peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
         # Move both tensors to the device
@@ -260,6 +262,7 @@ for epoch in range(n_epochs):
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch['vol']['data'].to(device)
+            images[images<0.01]=0
             peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
             # Move both tensors to the device
             peak_expanded = peak_expanded.to(device)
