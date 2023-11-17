@@ -1,32 +1,0 @@
-==========================================
-SLURM_JOB_ID = 16112065
-SLURM_JOB_NODELIST = b01-15
-TMPDIR = /tmp/SLURM_16112065
-==========================================
-2023-08-03 01:26:32,976 - A matching Triton is not available, some optimizations will not be enabled.
-Error caught was: No module named 'triton'
-  0%|                                         | 0/194 [00:00<?, ?it/s]Epoch 0:   0%|                                | 0/194 [00:00<?, ?it/s]Epoch 0:   0%|                                | 0/194 [00:10<?, ?it/s]
-Traceback (most recent call last):
-  File "/project/ajoshi_27/akrami/monai3D/GenerativeModels/3d_ddpm.py", line 335, in <module>
-    noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
-  File "/project/ajoshi_27/akrami/monai3D/GenerativeModels/generative/inferers/inferer.py", line 59, in __call__
-    prediction = diffusion_model(x=noisy_image, timesteps=timesteps, context=condition)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/project/ajoshi_27/akrami/monai3D/GenerativeModels/generative/networks/nets/diffusion_model_unet.py", line 1917, in forward
-    h = upsample_block(hidden_states=h, res_hidden_states_list=res_samples, temb=emb, context=context)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/project/ajoshi_27/akrami/monai3D/GenerativeModels/generative/networks/nets/diffusion_model_unet.py", line 1229, in forward
-    hidden_states = resnet(hidden_states, temb)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/project/ajoshi_27/akrami/monai3D/GenerativeModels/generative/networks/nets/diffusion_model_unet.py", line 672, in forward
-    h = self.nonlinearity(h)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/modules/activation.py", line 395, in forward
-    return F.silu(input, inplace=self.inplace)
-  File "/home1/akrami/.conda/envs/working_monai/lib/python3.9/site-packages/torch/nn/functional.py", line 2059, in silu
-    return torch._C._nn.silu(input)
-torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.34 GiB (GPU 0; 39.41 GiB total capacity; 36.10 GiB already allocated; 1.04 GiB free; 36.82 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF

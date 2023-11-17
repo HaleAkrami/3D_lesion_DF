@@ -1,9 +1,0 @@
-==========================================
-SLURM_JOB_ID = 16578618
-SLURM_JOB_NODELIST = b09-12
-TMPDIR = /tmp/SLURM_16578618
-==========================================
-Traceback (most recent call last):
-  File "/project/ajoshi_27/akrami/3D_lesion_DF/3d_ddpm.py", line 2, in <module>
-    warnings.filterwarnings('ignore')
-NameError: name 'warnings' is not defined

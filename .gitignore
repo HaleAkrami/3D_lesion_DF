@@ -35,3 +35,5 @@ wandb/
 *.nii.gz
 *.nii
 *.nii
+your_folder/
+Data/SVRegTestData/
