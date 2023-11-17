@@ -76,7 +76,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # CUDA and CUDNN Configuration
 # Uncomment the following line to specify CUDA_VISIBLE_DEVICES
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -94,10 +93,10 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
-pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
-csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_val_fold0.csv'
-csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
+csvpath_trains=['./Data/splits/combined_4datasets.csv']
+pathBase = '/scratch1/akrami/Data_train'
+csvpath_val = './Data/splits/IXI_val_fold0.csv'
+csvpath_test = './Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -176,7 +175,7 @@ optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 # %%
 # specify your model filename
 #model_filename = '/scratch1/akrami/models/3Ddiffusion/half/model_epoch984.pt'
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_2D_epoch975.pt'
+model_filename ='/scratch1/akrami/storage/DF_results/models/model_2D_epoch975.pt'
 # load state_dict into the model
 model.load_state_dict(torch.load(model_filename))
 
