@@ -43,7 +43,7 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test_inpaint_br')
+wandb.init(project='3D_ddpm',name='test_inpaint_brats')
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
