@@ -43,8 +43,8 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test_inpaint')
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
+wandb.init(project='3D_ddpm',name='test_inpaint_brats')
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
 config = {
@@ -75,10 +75,10 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
-pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
-csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_test.csv'
-csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
+csvpath_trains=['./Data/splits/combined_4datasets.csv']
+pathBase = '/scratch1/akrami/Data_train'
+csvpath_val = './Data/splits/IXI_test.csv'
+csvpath_test = './Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -137,7 +137,7 @@ inferer = DiffusionInferer(scheduler)
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_large_epoch999.pt'
+model_filename ='/project/ajoshi_27/akrami/3D_lesion_DF/models/model_large_epoch999.pt'
 model.load_state_dict(torch.load(model_filename))
 model.eval()
 
@@ -210,7 +210,9 @@ all_errors = []
 all_mse = []
 all_ssim_values=[]
 model.eval()
-progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
+test_loader_iter = iter(test_loader)
+
+progress_bar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader), ncols=70)
 for step, batch in progress_bar:
     images = batch['vol']['data'].to(device)
     images[images<0]=0
@@ -228,20 +230,14 @@ for step, batch in progress_bar:
 
     center = [dim // 2 for dim in images.shape[2:]]  # Calculate center indices
     cube_size = 20  # Half-size of the cube
-    mask = torch.ones_like(images)
-    mask[:, :, center[0]-cube_size:center[0]+cube_size, center[1]-cube_size:center[1]+cube_size, center[2]-cube_size:center[2]+cube_size] = 0
+    mask =1- (batch['seg']['data']>0).float().to(device)
     masked_image = images * mask
 
     noise = torch.randn_like(images)
     inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
     ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
-    mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
-                              center[1]-cube_size:center[1]+cube_size, 
-                              center[2]-cube_size:center[2]+cube_size], 
-                              inpainted_image[:,:, center[0]-cube_size:center[0]+cube_size,
-                                              center[1]-cube_size:center[1]+cube_size,
-                                              center[2]-cube_size:center[2]+cube_size])
+    mse_val = mse_loss(inpainted_image,images)
     all_ssim_values.append(ssim_val.item())
     all_mse.append(mse_val.item())
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))

@@ -43,15 +43,15 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test_inpaint_brats')
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
+wandb.init(project='2D_ddpm',name='test_inpaint_brats')
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
 config = {
     'batch_size': 1,
     'imgDimResize': (160, 192, 160),
     'imgDimPad': (208, 256, 208),
-    'spatialDims': '3D',
+    'spatialDims': '2D',
     'unisotropic_sampling': True,
     'perc_low': 1,
     'perc_high': 99,
@@ -119,7 +119,7 @@ device = torch.device("cuda")
 
 
 model = DiffusionModelUNet(
-    spatial_dims=3,
+    spatial_dims=2,
     in_channels=1,
     out_channels=1,
     num_channels=[32, 64, 64],
@@ -137,7 +137,7 @@ inferer = DiffusionInferer(scheduler)
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_large_epoch999.pt'
+model_filename ='/scratch1/akrami/storage/DF_results/models/model_2D_epoch975.pt'
 model.load_state_dict(torch.load(model_filename))
 model.eval()
 
@@ -178,6 +178,7 @@ def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
                         val_image_inpainted_prev_known = scheduler.add_noise(
                             original_samples=val_image_masked, noise=noise, timesteps=timesteps_prev
                         )
+                        print()
                     else:
                         val_image_inpainted_prev_known = val_image_masked
                 
@@ -214,46 +215,47 @@ test_loader_iter = iter(test_loader)
 
 progress_bar = tqdm.tqdm(enumerate(test_loader), total=len(test_loader), ncols=70)
 for step, batch in progress_bar:
-    images = batch['vol']['data'].to(device)
-    images[images<0]=0
+    images = batch['vol']['data'].permute(4,0,1, 3, 2).to(device)[:,0,:,:,:]
+    images[images<0.01]=0
     # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
     peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
     peak_expanded = peak_expanded.to(device)
 
     # Perform the division
-    images = (images / peak_expanded)
-    data_range = images.max()
+    images = (images / peak_expanded)[0,:,:,:,:]
+    data_range = images.max() 
     ssim_loss = MaskedLoss(SSIMLoss,spatial_dims=3, data_range=data_range)
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
 
 
-    center = [dim // 2 for dim in images.shape[2:]]  # Calculate center indices
+   
     cube_size = 20  # Half-size of the cube
-    mask =1- (images['seg']['data']>0).float().to(device)
+    mask =1- (batch['seg']['data']>0).float().permute(4,0,1, 3, 2).to(device)[:,0,:,:,:]
     masked_image = images * mask
 
-    noise = torch.randn_like(images)
-    inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
-    ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
-    mse_val = mse_loss(inpainted_image,images)
-    all_ssim_values.append(ssim_val.item())
-    all_mse.append(mse_val.item())
+    noise = torch.randn_like(images)
+    inpainted_image = inpaint_image(masked_image[middle_slice_idx:middle_slice_idx+1,:,:,:], mask[middle_slice_idx:middle_slice_idx+1,:,:,:], noise[middle_slice_idx:middle_slice_idx+1,:,:,:], model, scheduler, device)
+    
+    # ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
+    # mse_val = mse_loss(inpainted_image,images)
+    # all_ssim_values.append(ssim_val.item())
+    # all_mse.append(mse_val.item())
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
-    axes[0, 0].imshow(images[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 0].imshow(images[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 0].set_title('Original Image')
 
-    axes[0, 1].imshow(masked_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 1].imshow(masked_image[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(inpainted_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].imshow(inpainted_image.squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - inpainted_image)
-    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-    axes[1, 1].set_title('Error Image')
+    # error = torch.abs(images - inpainted_image)
+    # axes[1, 1].imshow(error[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    # axes[1, 1].set_title('Error Image')
     
     plt.tight_layout()
     plt.show()
@@ -261,13 +263,13 @@ for step, batch in progress_bar:
     wandb.log({"sample_image_val": [wandb.Image(plt)]})
     plt.close()  # Close the figure to free up memory
 
-# Average Dice score
-avg_dice_score = sum(all_mse) / len(all_mse)
-print(f"Average mse over the test set: {avg_dice_score}")
+# # Average Dice score
+# avg_dice_score = sum(all_mse) / len(all_mse)
+# print(f"Average mse over the test set: {avg_dice_score}")
 
-# Average SSIM values
-avg_ssim_value = sum(all_ssim_values) / len(all_ssim_values)
-print(f"Average SSIM between specified regions of original and denoised images: {avg_ssim_value}")
+# # Average SSIM values
+# avg_ssim_value = sum(all_ssim_values) / len(all_ssim_values)
+# print(f"Average SSIM between specified regions of original and denoised images: {avg_ssim_value}")
 
 
 
