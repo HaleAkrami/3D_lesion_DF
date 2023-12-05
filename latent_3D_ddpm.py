@@ -226,12 +226,16 @@ for epoch in range(n_epochs):
         peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
         # Move both tensors to the device
         peak_expanded = peak_expanded.to(device)
-
+        #z = autoencoder.module.encode_stage_2_inputs(images.to(device))
         # Perform the division
         images = (images / peak_expanded)
+        batch_size = images.size(0)  # 0 for the first dimension, which is batch size
+
+
+
         with autocast(enabled=True):
             # Generate random noise
-            noise = torch.randn_like(z).to(device)
+            noise = torch.randn(batch_size, *z.size()[1:]).to(device)
 
             # Create timesteps
             timesteps = torch.randint(
@@ -266,11 +270,11 @@ for epoch in range(n_epochs):
             peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
             # Move both tensors to the device
             peak_expanded = peak_expanded.to(device)
-
+            batch_size = images.size(0)
             # Perform the division
             images = (images / peak_expanded)
-            noise = torch.randn_like(z).to(device)
-
+            noise = torch.randn(batch_size, *z.size()[1:]).to(device)
+            #z = autoencoder.module.encode_stage_2_inputs(images.to(device))
             # Create timesteps
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device

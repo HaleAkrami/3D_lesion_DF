@@ -43,7 +43,7 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test_inpaint')
+wandb.init(project='3D_ddpm_v2',name='test_inpaint')
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
@@ -235,7 +235,7 @@ for step, batch in progress_bar:
     noise = torch.randn_like(images)
     inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
-    ssim_val =1- ssim_loss(images, inpainted_image,mask)
+    ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
     mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
                               center[1]-cube_size:center[1]+cube_size, 
                               center[2]-cube_size:center[2]+cube_size], 

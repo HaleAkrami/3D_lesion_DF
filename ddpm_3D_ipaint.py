@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='ddpm_3D',name='3layers')
+wandb.init(project='ddpm_3D_inpaint',name='3layers')
 import wandb
 
 
@@ -14,7 +14,7 @@ import math
 import warnings
 from multiprocessing import Manager
 from typing import Optional
-
+from monai.networks.blocks import Convolution
 # Data manipulation libraries
 import numpy as np
 import pandas as pd
@@ -63,6 +63,37 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
 
 
+def generate_random_block_checkerboard_mask(batch_size, image_shape):
+    """
+    Generate a random checkerboard mask for a batch of 3D images with varying block sizes.
+
+    :param batch_size: Number of images in the batch.
+    :param image_shape: Shape of the 3D images (depth, height, width).
+    :return: Batch of checkerboard masks.
+    """
+    # Possible block sizes
+    possible_block_sizes = [(4, 4, 4), (8, 8, 8), (16, 16, 16)]
+
+    # Randomly select a block size
+    block_size = random.choice(possible_block_sizes)
+
+    # Calculate the number of blocks along each dimension
+    num_blocks = [dim // block for dim, block in zip(image_shape, block_size)]
+
+    # Create a random tensor of the size of the number of blocks
+    random_blocks = torch.randint(0, 2, (batch_size, *num_blocks))
+
+    # Repeat the blocks to match the original image size
+    repeated_blocks = random_blocks.repeat_interleave(block_size[0], dim=1)\
+                                   .repeat_interleave(block_size[1], dim=2)\
+                                   .repeat_interleave(block_size[2], dim=3)
+
+    # Crop the repeated blocks to match the exact image shape
+    masks = repeated_blocks[:, :image_shape[0], :image_shape[1], :image_shape[2]]
+
+    return masks,block_size
+
+# Generate masks with randomly chosen block sizes
 
 
 config = {
@@ -163,9 +194,36 @@ scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta
 
 inferer = DiffusionInferer(scheduler)
 
+
+
+original_conv1 = model.module.conv_in
+new_conv1 = Convolution(
+            spatial_dims=3,
+            in_channels=3,
+            out_channels=original_conv1.out_channels,
+            strides=1,
+            kernel_size=3,
+            padding=1,
+            conv_only=True,
+        )
+
+# # Create a new conv layer with 3 input channels and the same output channels, kernel size, etc.
+# new_conv1 = nn.Conv2d(3, original_conv1.out_channels, kernel_size=original_conv1.kernel_size, 
+#                       stride=original_conv1.stride, padding=original_conv1.padding)
+
+# Copy the weights from the original channel
+with torch.no_grad():
+    new_conv1.conv.weight[:, :1, :, :,:] = original_conv1.conv.weight.clone()  # Copy weights for the original channel
+    # Initialize the weights for the new channels to zero
+    new_conv1.conv.weight[:, 1:, :, :,:].zero_()  # Zero out weights for the additional channels
+    new_conv1.conv.bias = torch.nn.Parameter(original_conv1.conv.bias.clone())
+
+
+# Replace the original conv1 layer with the new one
+model.module.conv_in = new_conv1
+model = model.to(device)
+
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
-
-
 n_epochs = 1000
 val_interval = 25
 epoch_loss_list = []
@@ -222,19 +280,33 @@ for epoch in range(n_epochs):
         # This uses broadcasting to match the scaling factors' shape to the images' shape
         images_scaled = images * scaling_factors
 
+
+
+        masks_random_blocks, chosen_block_size = generate_random_block_checkerboard_mask(images_scaled.shape[0], images_scaled.shape[2:])
+        masks_random_blocks=masks_random_blocks.unsqueeze(dim=1).to(device)
+
+        if random.random() <= 0.25:
+            masks_random_blocks = masks_random_blocks*0
+
         optimizer.zero_grad(set_to_none=True)
 
         with autocast(enabled=True):
-            # Generate random noise
-            noise = torch.randn_like(images).to(device)
-
-            # Create timesteps
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
-            ).long()
+            ).long().to(device)
+            # Generate random noise
+            noise = torch.randn_like(images).to(device)
+            noisy_image = scheduler.add_noise(original_samples=images_scaled, noise=noise, timesteps=timesteps)
+            maked_input = images_scaled*masks_random_blocks
+            combined_tensor = torch.cat((masks_random_blocks, noisy_image), dim=1)
+            combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+            # Create timesteps
+            
 
             # Get model prediction
-            noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
+            
+            noise_pred = model(x=combined_tensor.to(device), timesteps=timesteps)
+            
 
             loss = F.mse_loss(noise_pred.float(), noise.float())
 
@@ -248,7 +320,7 @@ for epoch in range(n_epochs):
     epoch_loss_list.append(epoch_loss / (step + 1))
     wandb.log({"loss_train": epoch_loss / (step + 1)})
 
-    if (epoch + 1) % val_interval == 0:
+    if (epoch) % val_interval == 0:
         model.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
@@ -260,15 +332,28 @@ for epoch in range(n_epochs):
 
             # Perform the division
             images = (images / peak_expanded)
+
+
+            masks_random_blocks, chosen_block_size = generate_random_block_checkerboard_mask(images.shape[0], images.shape[2:])
+            masks_random_blocks=masks_random_blocks.unsqueeze(dim=1).to(device)
+            if random.random() <= 0.25:
+                masks_random_blocks = masks_random_blocks*0
+            maked_input = images*masks_random_blocks
+ 
+            # Generate random noise
             noise = torch.randn_like(images).to(device)
+            
             with torch.no_grad():
                 with autocast(enabled=True):
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
-                    ).long()
+                    ).long().to(device)
 
                     # Get model prediction
-                    noise_pred = inferer(inputs=images, diffusion_model=model, noise=noise, timesteps=timesteps)
+                    noisy_image = scheduler.add_noise(original_samples=images, noise=noise, timesteps=timesteps)
+                    combined_tensor = torch.cat((masks_random_blocks,noisy_image), dim=1)
+                    combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+                    noise_pred = model(x=combined_tensor, timesteps=timesteps)
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
@@ -280,10 +365,25 @@ for epoch in range(n_epochs):
         #80, 96, 80
         image = torch.randn_like(images)[0:1,:,:,:]
         image = image.to(device)
-        scheduler.set_timesteps(num_inference_steps=1000)
-        with autocast(enabled=True):
-            image = inferer.sample(input_noise=image, diffusion_model=model, scheduler=scheduler)
+        current_img = torch.randn_like(image).to(device)
 
+        masks_random_blocks = image*0
+        maked_input = image*masks_random_blocks
+        combined_tensor = torch.cat((masks_random_blocks, current_img), dim=1)
+        combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+        scheduler.set_timesteps(num_inference_steps=1000)
+        progress_bar = tqdm(scheduler.timesteps)
+        for t in progress_bar:  # go through the noising process
+            with autocast(enabled=False):
+                with torch.no_grad():
+                    model_output = model(combined_tensor, timesteps=torch.Tensor((t,)).to(image.device))
+                    current_img, _ = scheduler.step(
+                        model_output, t, current_img
+                    )  # this is the prediction x_t at the time step t
+                
+                    combined_tensor = torch.cat((masks_random_blocks, current_img), dim=1)
+                    combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+                    
 
         middle_slice_idx = image.size(-1) // 2
         plt.figure(figsize=(2, 2))
@@ -297,7 +397,7 @@ for epoch in range(n_epochs):
 
         #plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/small_net/model_large_epoch{epoch}.pt"
+        model_filename = f"./models/small_net/model_inpaint_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 
