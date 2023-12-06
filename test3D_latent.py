@@ -18,6 +18,7 @@ import warnings
 from multiprocessing import Manager
 from typing import Optional
 import tqdm
+from generative.inferers import LatentDiffusionInferer
 # Third-party Libraries
 import numpy as np
 import pandas as pd
@@ -36,18 +37,18 @@ from sklearn.metrics import precision_recall_curve, auc
 from monai.config import print_config
 from monai.data import DataLoader
 from monai.utils import set_determinism
-
+from generative.networks.nets import DiffusionModelUNet,AutoencoderKL
 # Custom Libraries
 from generative.inferers import DiffusionInferer
 from generative.networks.nets import DiffusionModelUNet
 from generative.networks.schedulers import DDPMScheduler, DDIMScheduler
 from dataloader import Train ,Eval 
-
+from monai.utils import first, set_determinism
 # Configuration
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test')
+wandb.init(project='latent_ddpm',name='test')
 
 JUPYTER_ALLOW_INSECURE_WRITES=True
 
@@ -136,7 +137,7 @@ data_test = Eval(var_csv['test'],config)
 
 
 #data_train = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_train_fold0.csv', converters={'img_path': pd.eval}), config)
-#train_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
+train_loader = DataLoader(data_train, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
 
 #data_val = Train(pd.read_csv('/project/ajoshi_27/akrami/monai3D/GenerativeModels/data/split/IXI_val_fold0.csv', converters={'img_path': pd.eval}), config)
 val_loader = DataLoader(data_val, batch_size=config.get('batch_size', 1),shuffle=True,num_workers=8)
@@ -153,34 +154,77 @@ device = torch.device("cuda")
 # %%
 device = torch.device("cuda")
 
-model = DiffusionModelUNet(
+device = torch.device("cuda")
+
+autoencoder = AutoencoderKL(
     spatial_dims=3,
     in_channels=1,
     out_channels=1,
-    num_channels=[32, 64, 64],
-    attention_levels=[False, False,True],
-    num_head_channels=[0, 0,32],
-    num_res_blocks=2,
+    num_channels=(32, 64, 64),
+    latent_channels=3,
+    num_res_blocks=1,
+    norm_num_groups=16,
+    attention_levels=(False, False, True),
 )
-model.to(device)
+
+
+check_data = first(train_loader)
+images = check_data['vol']['data'].to(device)
+# Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
+peak_expanded = (check_data['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+# Move both tensors to the device
+peak_expanded = peak_expanded.to(device)
+
+# Perform the division
+images = (images / peak_expanded)
+
+autoencoder.to(device)
+
 if torch.cuda.device_count() > 1:
     print("Using", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
-scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
+    autoencoder = nn.DataParallel(autoencoder)
 
-inferer = DiffusionInferer(scheduler)
+ 
+model_filename = './models/model_KL_epoch449.pt'
+autoencoder.load_state_dict(torch.load(model_filename))
 
-optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
+
+unet = DiffusionModelUNet(
+    spatial_dims=3,
+    in_channels=3,
+    out_channels=3,
+    num_res_blocks=1,
+    num_channels=(32, 64, 64),
+    attention_levels=(False, True, True),
+    num_head_channels=(0, 64, 64),
+)
+unet.to(device)
+
+
+scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0015, beta_end=0.0195)
+
+with torch.no_grad():
+    with autocast(enabled=True):
+        z = autoencoder.module.encode_stage_2_inputs(images.to(device))
+
+print(f"Scaling factor set to {1/torch.std(z)}")
+scale_factor = 1 / torch.std(z)
+inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+optimizer_diff = torch.optim.Adam(params=unet.parameters(), lr=1e-4)
+
+
+wandb.watch(unet, log_freq=100)
+
 
 # %%
 # specify your model filename
 #model_filename = '/scratch1/akrami/models/3Ddiffusion/half/model_epoch984.pt'
-model_filename ='/scratch1/akrami/storage/DF_results/models/model_large_epoch999.pt'
+model_filename ='./models/latent_KL_epoch975.pt'
 # load state_dict into the model
-model.load_state_dict(torch.load(model_filename))
+unet.load_state_dict(torch.load(model_filename))
 
 # if you need to set the model in evaluation mode
-model.eval()
+unet.eval()
 
 # %% [markdown]
 # # Generate an Image
@@ -208,10 +252,10 @@ i = 0
 all_errors = []
 
 
-model.eval()
 progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
 for step, batch in progress_bar:
     images = batch['vol']['data'].to(device)
+    images[images<0.01]=0
     # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
     peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
     peak_expanded = peak_expanded.to(device)
@@ -221,24 +265,28 @@ for step, batch in progress_bar:
     
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
-    noise = torch.randn_like(images)
-    noisy_img = scheduler.add_noise(original_samples=images, noise=noise, timesteps=torch.tensor(sample_time))
+    batch_size = images.shape[0]
+    z = autoencoder.module.encode_stage_2_inputs(images.to(device))
+    noise = torch.randn(batch_size, *z.size()[1:]).to(device)
+    
+    noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
     noisy_img = noisy_img.to(device)
-    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, model)
+    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
+    image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
     axes[0, 0].imshow(images[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 0].set_title('Original Image')
 
-    axes[0, 1].imshow(noisy_img[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 1].imshow(images[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(denoised_sample[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].imshow(image_decoded[i][0][:,:,middle_slice_idx].detach().squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - denoised_sample)
-    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    error = torch.abs(images - image_decoded)
+    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].detach().squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     
     plt.tight_layout()
@@ -295,10 +343,25 @@ all_ssim_values=[]
 for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
     images = batch['vol']['data'].to(device)
     # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
+    images[images<0.01]=0
+    # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
     peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
     peak_expanded = peak_expanded.to(device)
+
+    # Perform the division
     images = (images / peak_expanded)
+    
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
+
+
+    batch_size = images.shape[0]
+    z = autoencoder.module.encode_stage_2_inputs(images.to(device))
+    noise = torch.randn(batch_size, *z.size()[1:]).to(device)
+    
+    noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
+    noisy_img = noisy_img.to(device)
+    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
+    image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
 
 
     
@@ -308,12 +371,9 @@ for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
     
     
 
-    noise = torch.randn_like(images)
-    noisy_img = scheduler.add_noise(original_samples=images, noise=noise, timesteps=torch.tensor(sample_time))
-    noisy_img = noisy_img.to(device)
-    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, model)
+    
 
-    error = torch.abs(images - denoised_sample)
+    error = torch.abs(images -image_decoded)
     thresholded_error = (error > threshold).float().to(device)
     gt_segmentation = (batch['seg']['data']>0).float().to(device)
     
@@ -331,7 +391,7 @@ for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
     dice_score = 1-dice_loss(thresholded_error, gt_segmentation,non_background_mask)
     all_dices.append(dice_score.item())
     # Calculate SSIM for the regions specified by the combined mask
-    ssim_val =1- ssim_loss(images, denoised_sample,combined_mask)
+    ssim_val =1- ssim_loss(images, image_decoded,combined_mask)
     all_ssim_values.append(ssim_val.item())
 
 
@@ -347,7 +407,7 @@ for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
         axes[0, 1].set_title('Segmented Image')
         
         # Transformed Image
-        axes[1, 0].imshow(denoised_sample[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+        axes[1, 0].imshow(image_decoded[i][0][:,:,middle_slice_idx].detach().squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
         axes[1, 0].set_title('Transformed Image')
         
         # Thresholded Difference Image
@@ -355,7 +415,7 @@ for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
         axes[1, 1].imshow(thresholded_error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=1, cmap='gray')
         axes[1, 1].set_title('Thresholded Difference Image')
 
-        axes[1, 2].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=1, cmap='gray')
+        axes[1, 2].imshow(error[i][0][:,:,middle_slice_idx].detach().squeeze().cpu().numpy(), vmin=0, vmax=1, cmap='gray')
         axes[1, 1].set_title('error image')
         
         # Save the entire figure

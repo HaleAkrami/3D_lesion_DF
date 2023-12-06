@@ -256,7 +256,7 @@ for step, batch in progress_bar:
     axes[1, 0].set_title('Denoised Image')
 
     error = torch.abs(images - inpainted_image)
-    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].detach()squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     
     plt.tight_layout()
