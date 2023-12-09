@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='ddpm_3D_inpaint',name='3layers')
+wandb.init(project='ddpm_3D_inpaint_correct',name='3layers')
 import wandb
 
 
@@ -59,7 +59,7 @@ from generative.networks.schedulers import DDPMScheduler, DDIMScheduler
 
 # Weights and Biases for experiment tracking
 from dataloader import Train,Eval
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3,5,6,7"
 
 
 
@@ -223,10 +223,13 @@ with torch.no_grad():
 model.module.conv_in = new_conv1
 model = model.to(device)
 
+
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_epoch400.pt'
+model.load_state_dict(torch.load(model_filename)) 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 n_epochs = 1000
 val_interval = 25
-epoch_loss_list = []
+epoch_loss_list = [] 
 val_epoch_loss_list = []
 
 scaler = GradScaler()
@@ -298,7 +301,7 @@ for epoch in range(n_epochs):
             noise = torch.randn_like(images).to(device)
             noisy_image = scheduler.add_noise(original_samples=images_scaled, noise=noise, timesteps=timesteps)
             maked_input = images_scaled*masks_random_blocks
-            combined_tensor = torch.cat((masks_random_blocks, noisy_image), dim=1)
+            combined_tensor = torch.cat(( noisy_image,masks_random_blocks), dim=1)
             combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
             # Create timesteps
             
@@ -351,7 +354,7 @@ for epoch in range(n_epochs):
 
                     # Get model prediction
                     noisy_image = scheduler.add_noise(original_samples=images, noise=noise, timesteps=timesteps)
-                    combined_tensor = torch.cat((masks_random_blocks,noisy_image), dim=1)
+                    combined_tensor = torch.cat((noisy_image,masks_random_blocks), dim=1)
                     combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
                     noise_pred = model(x=combined_tensor, timesteps=timesteps)
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
@@ -369,7 +372,7 @@ for epoch in range(n_epochs):
 
         masks_random_blocks = image*0
         maked_input = image*masks_random_blocks
-        combined_tensor = torch.cat((masks_random_blocks, current_img), dim=1)
+        combined_tensor = torch.cat((current_img,masks_random_blocks), dim=1)
         combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
         scheduler.set_timesteps(num_inference_steps=1000)
         progress_bar = tqdm(scheduler.timesteps)
@@ -381,13 +384,13 @@ for epoch in range(n_epochs):
                         model_output, t, current_img
                     )  # this is the prediction x_t at the time step t
                 
-                    combined_tensor = torch.cat((masks_random_blocks, current_img), dim=1)
+                    combined_tensor = torch.cat((current_img,masks_random_blocks), dim=1)
                     combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
                     
 
         middle_slice_idx = image.size(-1) // 2
         plt.figure(figsize=(2, 2))
-        plt.imshow(image[0, 0, :, :, middle_slice_idx].cpu(), vmin=0, vmax=1, cmap="gray")
+        plt.imshow(current_img[0, 0, :, :, middle_slice_idx].cpu(), vmin=0, vmax=1, cmap="gray")
         plt.tight_layout()
         plt.axis("off")
         plt.show()

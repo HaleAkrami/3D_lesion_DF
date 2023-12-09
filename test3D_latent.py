@@ -57,6 +57,7 @@ JUPYTER_ALLOW_INSECURE_WRITES=True
 
 # %%
 # Initialize Configuration
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3,4,5,6,7"
 config = {
     'batch_size': 1,
     'imgDimResize': (160, 192, 160),
@@ -94,10 +95,10 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['./Data/splits/combined_4datasets.csv']
-pathBase = '/scratch1/akrami/Data_train'
-csvpath_val = './Data/splits/IXI_val_fold0.csv'
-csvpath_test = './Data/splits/Brats21_sub_test.csv'
+csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
+pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_val_fold0.csv'
+csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -185,7 +186,7 @@ if torch.cuda.device_count() > 1:
     autoencoder = nn.DataParallel(autoencoder)
 
  
-model_filename = './models/model_KL_epoch449.pt'
+model_filename = '/acmenas/hakrami/3D_lesion_DF/models/latent_3D/model_KL_epoch449.pt'
 autoencoder.load_state_dict(torch.load(model_filename))
 
 
@@ -219,13 +220,13 @@ wandb.watch(unet, log_freq=100)
 # %%
 # specify your model filename
 #model_filename = '/scratch1/akrami/models/3Ddiffusion/half/model_epoch984.pt'
-model_filename ='./models/latent_KL_epoch975.pt'
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/norm3/latent_KL_epoch975.pt'
 # load state_dict into the model
 unet.load_state_dict(torch.load(model_filename))
 
 # if you need to set the model in evaluation mode
 unet.eval()
-
+autoencoder.eval()
 # %% [markdown]
 # # Generate an Image
 
@@ -250,10 +251,12 @@ def denoise(noised_img,sample_time,scheduler,inferer,model):
 sample_time = 500
 i = 0
 all_errors = []
-
-
+samp_num =0
+import gc
 progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
-for step, batch in progress_bar:
+for setp, batch in progress_bar :
+    print(samp_num)
+    samp_num+=1
     images = batch['vol']['data'].to(device)
     images[images<0.01]=0
     # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
@@ -266,13 +269,15 @@ for step, batch in progress_bar:
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
     batch_size = images.shape[0]
-    z = autoencoder.module.encode_stage_2_inputs(images.to(device))
-    noise = torch.randn(batch_size, *z.size()[1:]).to(device)
-    
-    noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
-    noisy_img = noisy_img.to(device)
-    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
-    image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
+    with torch.no_grad():
+        with autocast(enabled=True):
+            z = autoencoder.module.encode_stage_2_inputs(images.to(device))
+            noise = torch.randn(batch_size, *z.size()[1:]).to(device)
+            
+            noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
+            noisy_img = noisy_img.to(device)
+            denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
+            image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
@@ -295,7 +300,14 @@ for step, batch in progress_bar:
     wandb.log({"sample_image_val": [wandb.Image(plt)]})
     plt.close()  # Close the figure to free up memory
 
-    all_errors.append(error.flatten())
+    all_errors.append(error.flatten().cpu())
+
+
+
+    # ... inside your loop after processing each sample
+    del images, image_decoded, error, noisy_img, denoised_sample
+    torch.cuda.empty_cache() # Clear cache if you're using GPU
+    gc.collect()
 
 
 # Stack all error values to form a big tensor
@@ -355,13 +367,15 @@ for step, batch in tqdm.tqdm(enumerate(test_loader), total=len(test_loader)):
 
 
     batch_size = images.shape[0]
-    z = autoencoder.module.encode_stage_2_inputs(images.to(device))
-    noise = torch.randn(batch_size, *z.size()[1:]).to(device)
-    
-    noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
-    noisy_img = noisy_img.to(device)
-    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
-    image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
+    with torch.no_grad():
+        with autocast(enabled=True):
+            z = autoencoder.module.encode_stage_2_inputs(images.to(device))
+            noise = torch.randn(batch_size, *z.size()[1:]).to(device)
+            
+            noisy_img = scheduler.add_noise(original_samples=z, noise=noise, timesteps=torch.tensor(sample_time))
+            noisy_img = noisy_img.to(device)
+            denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, unet)
+            image_decoded = autoencoder.module.decode_stage_2_outputs(denoised_sample /scale_factor)
 
 
     

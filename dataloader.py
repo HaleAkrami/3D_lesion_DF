@@ -155,8 +155,8 @@ def Eval(csv,cfg):
         subject_dict = {
             'vol': vol_image,
             'peak': sub.peak,  # Store the peak value
-            'seg' : tio.LabelMap(sub.seg_path, reader=sitk_reader, type=tio.LABEL),
             'age' : sub.age,
+            'seg' : tio.LabelMap(sub.seg_path, reader=sitk_reader, type=tio.LABEL),
             'ID' : sub.img_name,
             'path' : sub.img_path
         }
