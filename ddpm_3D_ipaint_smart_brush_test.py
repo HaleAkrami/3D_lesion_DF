@@ -72,7 +72,7 @@ def generate_random_block_checkerboard_mask(batch_size, image_shape):
     :return: Batch of checkerboard masks.
     """
     # Possible block sizes
-    possible_block_sizes = [ (16, 16, 16)]
+    possible_block_sizes = [ (4, 4, 4)]
 
     # Randomly select a block size
     block_size = random.choice(possible_block_sizes)
@@ -223,7 +223,7 @@ with torch.no_grad():
 model.module.conv_in = new_conv1
 model = model.to(device)
 
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch350.pt'
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch875.pt'
 model.load_state_dict(torch.load(model_filename)) 
 
 
@@ -243,10 +243,10 @@ wandb.watch(model, log_freq=100)
 
 model.eval()
 val_epoch_loss = 0
-for step, batch in enumerate(val_loader):
+for step, batch in enumerate(test_loader):
     images = batch['vol']['data'].to(device)
     images[images<0.01]=0
-
+    images = images/2
     peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
     # Move both tensors to the device
     peak_expanded = peak_expanded.to(device)
