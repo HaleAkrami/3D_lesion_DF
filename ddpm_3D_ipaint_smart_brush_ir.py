@@ -62,7 +62,71 @@ from dataloader import Train,Eval
 os.environ["CUDA_VISIBLE_DEVICES"] = "3,5,6,7"
 
 
+from functools import reduce
+from gen_rand_blob import gen_rand_blob_mesh, mesh_to_mask_3d
+from matplotlib import pyplot as plt
 
+from dfsio import readdfs, writedfs
+import nibabel as nb
+import numpy as np
+
+def mask_gen(volume_size):
+
+    vertices, faces = gen_rand_blob_mesh(radius=1.0,num_subdivisions=6,scale=0.7)
+
+    class m:
+        pass
+
+    m.faces = faces
+
+
+    vertices = (vertices - vertices.min())/(vertices.max() - vertices.min())
+    m.vertices = vertices
+
+    # Create a binary mask from the mesh
+    binary_mask = mesh_to_mask_3d((volume_size[0])*(m.vertices),volume_size=volume_size)
+    return binary_mask
+
+
+
+
+import torch
+import numpy as np
+import random
+
+def apply_mask_to_batch(images, mask_gen):
+    nbatch, _, x, y, z = images.shape
+
+    # Generate a random size for the mask within the specified bounds
+    mask_size = (random.randint(20, x//2), random.randint(20, y//2), random.randint(20, z//2))
+
+    # Generate the mask with the random size
+    random_mask = mask_gen(mask_size)
+
+    # Choose a random location to place the mask
+    x_pos = random.randint(0, x - mask_size[0])
+    y_pos = random.randint(0, y - mask_size[1])
+    z_pos = random.randint(0, z - mask_size[2])
+
+    # Initialize a mask for a single image
+    single_mask = torch.zeros((1, 1, x, y, z))
+    single_mask[:, :, x_pos:x_pos+mask_size[0], y_pos:y_pos+mask_size[1], z_pos:z_pos+mask_size[2]] = torch.from_numpy(random_mask)
+
+    # Repeat the single mask across the batch dimension
+    full_masks = single_mask.repeat(nbatch, 1, 1, 1, 1)
+
+    # Apply the masks to the images
+    masked_images = images.clone()
+    masked_images[full_masks == 1] = 0  # Set the masked regions to 0 or any other value you prefer
+
+    return masked_images, full_masks
+
+# Assuming you have a batch of 3D images in the shape (nbatch, 1, x, y, z)
+nbatch, x, y, z = 10, 64, 64, 64  # Example dimensions with a batch size of 10
+images = torch.rand((nbatch, 1, x, y, z))  # An example batch of images
+
+# Apply the masks to the batch of images
+masked_images, masks = apply_mask_to_batch(images, mask_gen)
 def generate_random_block_checkerboard_mask(batch_size, image_shape):
     """
     Generate a random checkerboard mask for a batch of 3D images with varying block sizes.
@@ -199,7 +263,7 @@ inferer = DiffusionInferer(scheduler)
 original_conv1 = model.module.conv_in
 new_conv1 = Convolution(
             spatial_dims=3,
-            in_channels=3,
+            in_channels=2,
             out_channels=original_conv1.out_channels,
             strides=1,
             kernel_size=3,
@@ -222,10 +286,9 @@ with torch.no_grad():
 # Replace the original conv1 layer with the new one
 model.module.conv_in = new_conv1
 model = model.to(device)
-
-
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_900_epoch175.pt'
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch975.pt'
 model.load_state_dict(torch.load(model_filename)) 
+
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 n_epochs = 1000
 val_interval = 25
@@ -265,7 +328,7 @@ for epoch in range(n_epochs):
        # images = batch["image"].to(device)
         images = batch['vol']['data'].to(device)
         images[images<0.01]=0
-        images = images/2
+        images = images
         # Expand the dimensions of sub_test['peak'] to make it [1, 1, 1, 1, 4]
         peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
         # Move both tensors to the device
@@ -275,10 +338,10 @@ for epoch in range(n_epochs):
         images = (images / peak_expanded)
 
 
-        #scaling_factors = 0.75 + torch.rand((images.size(0), 1, 1, 1, 1)) * (1.25 - 0.75)
-        scaling_factors =1
+        scaling_factors = 0.75 + torch.rand((images.size(0), 1, 1, 1, 1)) * (1.25 - 0.75)
+        #scaling_factors =1
         # Send the scaling factors to the same device as images
-        #scaling_factors = scaling_factors.to(device)
+        scaling_factors = scaling_factors.to(device)
 
         # Multiply the images by the scaling factors
         # This uses broadcasting to match the scaling factors' shape to the images' shape
@@ -286,11 +349,10 @@ for epoch in range(n_epochs):
 
 
 
-        masks_random_blocks, chosen_block_size = generate_random_block_checkerboard_mask(images_scaled.shape[0], images_scaled.shape[2:])
-        masks_random_blocks=masks_random_blocks.unsqueeze(dim=1).to(device)
+        _, masks_random_blocks = apply_mask_to_batch(images, mask_gen)
+        masks_random_blocks=1-masks_random_blocks.to(device)
 
-        if random.random() <= 0.25:
-            masks_random_blocks = masks_random_blocks*0
+        
 
         optimizer.zero_grad(set_to_none=True)
 
@@ -301,9 +363,9 @@ for epoch in range(n_epochs):
             # Generate random noise
             noise = torch.randn_like(images).to(device)
             noisy_image = scheduler.add_noise(original_samples=images_scaled, noise=noise, timesteps=timesteps)
-            maked_input = images_scaled*masks_random_blocks
-            combined_tensor = torch.cat(( noisy_image,masks_random_blocks), dim=1)
-            combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+            maked_input = images_scaled*masks_random_blocks+(1-masks_random_blocks)* noisy_image
+            combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
+            
             # Create timesteps
             
 
@@ -339,11 +401,8 @@ for epoch in range(n_epochs):
             images = (images / peak_expanded)
 
 
-            masks_random_blocks, chosen_block_size = generate_random_block_checkerboard_mask(images.shape[0], images.shape[2:])
-            masks_random_blocks=masks_random_blocks.unsqueeze(dim=1).to(device)
-            if random.random() <= 0.25:
-                masks_random_blocks = masks_random_blocks*0
-            maked_input = images*masks_random_blocks
+            _, masks_random_blocks = apply_mask_to_batch(images, mask_gen)
+            masks_random_blocks=1-masks_random_blocks.to(device)
  
             # Generate random noise
             noise = torch.randn_like(images).to(device)
@@ -355,9 +414,10 @@ for epoch in range(n_epochs):
                     ).long().to(device)
 
                     # Get model prediction
+                    
                     noisy_image = scheduler.add_noise(original_samples=images, noise=noise, timesteps=timesteps)
-                    combined_tensor = torch.cat((noisy_image,masks_random_blocks), dim=1)
-                    combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+                    maked_input = images*masks_random_blocks+(1-masks_random_blocks)* noisy_image
+                    combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
                     noise_pred = model(x=combined_tensor, timesteps=timesteps)
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
@@ -373,9 +433,8 @@ for epoch in range(n_epochs):
         current_img = torch.randn_like(image).to(device)
 
         masks_random_blocks = masks_random_blocks[0:1,:,:,:]
-        maked_input = image*masks_random_blocks
-        combined_tensor = torch.cat((current_img,masks_random_blocks), dim=1)
-        combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+        maked_input = image*masks_random_blocks+(1-masks_random_blocks)* current_img 
+        combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
         scheduler.set_timesteps(num_inference_steps=1000)
         progress_bar = tqdm(scheduler.timesteps)
         for t in progress_bar:  # go through the noising process
@@ -385,9 +444,9 @@ for epoch in range(n_epochs):
                     current_img, _ = scheduler.step(
                         model_output, t, current_img
                     )  # this is the prediction x_t at the time step t
-                
-                    combined_tensor = torch.cat((current_img,masks_random_blocks), dim=1)
-                    combined_tensor = torch.cat((combined_tensor, maked_input), dim=1)
+                    maked_input = image*masks_random_blocks+(1-masks_random_blocks)* current_img
+                    combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
+                    
                     
 
         middle_slice_idx = image.size(-1) // 2
@@ -416,7 +475,7 @@ for epoch in range(n_epochs):
 
         #plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/small_net/model_inpaint_4_900_epoch{epoch}.pt"
+        model_filename = f"./models/small_net/model_inpaint_smart_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 
