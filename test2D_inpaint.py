@@ -43,14 +43,14 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='2D_ddpm_v2',name='test_inpaint')
+wandb.init(project='2D_ddpm_final',name='test_inpaint')
 
 # Initialize Configuration
 config = {
     'batch_size': 1,
     'imgDimResize': (160, 192, 160),
     'imgDimPad': (208, 256, 208),
-    'spatialDims': '3D',
+    'spatialDims': '2D',
     'unisotropic_sampling': True,
     'perc_low': 1,
     'perc_high': 99,
@@ -249,7 +249,7 @@ for step, batch in progress_bar:
     inpainted_image_org = images.clone()
     inpainted_image_org[:, :, :,:,center[2]-cube_size:center[2]+cube_size]=inpainted_image_reshaped
     
-    ssim_val =1- ssim_loss(images, inpainted_image_org,1-mask)
+    ssim_val =1- ssim_loss(images, inpainted_image_org,mask)
     mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
                               center[1]-cube_size:center[1]+cube_size, 
                               center[2]-cube_size:center[2]+cube_size], 
