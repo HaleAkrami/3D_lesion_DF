@@ -237,7 +237,7 @@ for step, batch in progress_bar:
     noise = torch.randn_like(images)
     inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
-    ssim_val =1- ssim_loss(images, inpainted_image,mask)
+    ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
     mse_val = mse_loss(inpainted_image,images)
     all_ssim_values.append(ssim_val.item())
     all_mse.append(mse_val.item())

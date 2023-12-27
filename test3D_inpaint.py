@@ -43,14 +43,15 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='2D_ddpm_final',name='test_inpaint')
+wandb.init(project='3D_ddpm_final',name='test_inpaint')
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
 config = {
     'batch_size': 1,
     'imgDimResize': (160, 192, 160),
     'imgDimPad': (208, 256, 208),
-    'spatialDims': '2D',
+    'spatialDims': '3D',
     'unisotropic_sampling': True,
     'perc_low': 1,
     'perc_high': 99,
@@ -74,10 +75,10 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['./Data/splits/combined_4datasets.csv']
-pathBase = '/scratch1/akrami/Data_train'
-csvpath_val = './Data/splits/IXI_test.csv'
-csvpath_test = './Data/splits/Brats21_sub_test.csv'
+csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
+pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_test.csv'
+csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -118,7 +119,7 @@ device = torch.device("cuda")
 
 
 model = DiffusionModelUNet(
-    spatial_dims=2,
+    spatial_dims=3,
     in_channels=1,
     out_channels=1,
     num_channels=[32, 64, 64],
@@ -136,7 +137,7 @@ inferer = DiffusionInferer(scheduler)
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
-model_filename ='/scratch1/akrami/storage/DF_results/models/model_2D_epoch975.pt'
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_large_epoch999.pt'
 model.load_state_dict(torch.load(model_filename))
 model.eval()
 
@@ -164,7 +165,7 @@ def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
     timesteps = torch.Tensor((999,)).to(device).long()
     scheduler.set_timesteps(num_inference_steps=999)
     progress_bar = tqdm.tqdm(scheduler.timesteps)
-    batch_size = val_image_masked.shape[0]
+
     num_resample_steps = 4
     with torch.no_grad():
         with autocast(enabled=True):
@@ -173,9 +174,9 @@ def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
                 # get the known portion at t-1
                     if t > 0:
                         noise =  torch.randn_like(val_image_masked).to(device)
-                        timesteps_prev_batch = torch.full((batch_size,), t-1).to(device).long()
+                        timesteps_prev = torch.Tensor((t - 1,)).to(device).long()
                         val_image_inpainted_prev_known = scheduler.add_noise(
-                            original_samples=val_image_masked, noise=noise, timesteps=timesteps_prev_batch
+                            original_samples=val_image_masked, noise=noise, timesteps=timesteps_prev
                         )
                     else:
                         val_image_inpainted_prev_known = val_image_masked
@@ -183,8 +184,7 @@ def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
                 # perform a denoising step to get the unknown portion at t-1
                     if t > 0:
                         timesteps = torch.Tensor((t,)).to(device).long()
-                        timesteps_batch = torch.full((batch_size,), t).to(device).long()
-                        model_output = model(val_image_inpainted, timesteps=timesteps_batch)
+                        model_output = model(val_image_inpainted, timesteps=timesteps)
                         val_image_inpainted_prev_unknown, _ = scheduler.step(model_output, t, val_image_inpainted)
 
                     # combine known and unknown using the mask
@@ -229,31 +229,17 @@ for step, batch in progress_bar:
     center = [dim // 2 for dim in images.shape[2:]]  # Calculate center indices
     cube_size = 20  # Half-size of the cube
     mask = torch.ones_like(images)
-    mask[:, :, center[0]-cube_size:center[0]+cube_size, center[1]-cube_size:center[1]+cube_size, center[2]- cube_size:center[2]+cube_size] = 0
+    mask[:, :, center[0]-cube_size:center[0]+cube_size, center[1]-cube_size:center[1]+cube_size, center[2]-cube_size:center[2]+cube_size] = 0
     masked_image = images * mask
 
     noise = torch.randn_like(images)
-    reshaped_img= masked_image.permute(4,0,1, 3, 2)[center[0]-cube_size:center[0]+cube_size,0,:,:,:]
-    reshaped_mask = mask.permute(4,0,1, 3, 2)[center[0]-cube_size:center[0]+cube_size,0,:,:,:]
-    reshaped_noise = noise.permute(4,0,1, 3, 2)[center[0]-cube_size:center[0]+cube_size,0,:,:,:]
-
-    # print(reshaped_img.shape)
-    # print(reshaped_mask.shape)
-    # print(reshaped_noise.shape)
+    inpainted_image = inpaint_image(masked_image, mask, noise, model, scheduler, device)
     
-    
-    inpainted_image = inpaint_image(reshaped_img, reshaped_mask, reshaped_noise, model, scheduler, device)
-    inpainted_image_reshaped = inpainted_image.permute(1,3,2,0).unsqueeze(0)
-
-
-    inpainted_image_org = images.clone()
-    inpainted_image_org[:, :, :,:,center[2]-cube_size:center[2]+cube_size]=inpainted_image_reshaped
-    
-    ssim_val =1- ssim_loss(images, inpainted_image_org,1-mask)
+    ssim_val =1- ssim_loss(images, inpainted_image,1-mask)
     mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
                               center[1]-cube_size:center[1]+cube_size, 
                               center[2]-cube_size:center[2]+cube_size], 
-                              inpainted_image_org[:,:, center[0]-cube_size:center[0]+cube_size,
+                              inpainted_image[:,:, center[0]-cube_size:center[0]+cube_size,
                                               center[1]-cube_size:center[1]+cube_size,
                                               center[2]-cube_size:center[2]+cube_size])
     all_ssim_values.append(ssim_val.item())
@@ -266,11 +252,11 @@ for step, batch in progress_bar:
     axes[0, 1].imshow(masked_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(inpainted_image_org[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].imshow(inpainted_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - inpainted_image_org)
-    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    error = torch.abs(images - inpainted_image)
+    axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].detach().squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     
     plt.tight_layout()
