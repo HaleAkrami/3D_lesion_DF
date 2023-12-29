@@ -214,61 +214,62 @@ i = 0
 all_errors = []
 
 model.eval()
-# progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
-# for step, batch in progress_bar:
-#     images = batch['vol']['data'].permute(4,0,1, 3, 2).to(device)[:,0,:,:,:]
-#     images[images<0.01]=0
-#     # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
-#     peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
-#     peak_expanded = peak_expanded.to(device)
+progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
+for step, batch in progress_bar:
+    images = batch['vol']['data'].permute(4,0,1, 3, 2).to(device)[:,0,:,:,:]
+    images[images<0.01]=0
+    # Expand the dimensions of batch['peak'] to make it [1, 1, 1, 1, 4]
+    peak_expanded = (batch['peak'].unsqueeze(1).unsqueeze(2).unsqueeze(3).unsqueeze(4)).long()
+    peak_expanded = peak_expanded.to(device)
 
-#     # Perform the division
-#     images = (images / peak_expanded)[0,:,:,:,:]
+    # Perform the division
+    images = (images / peak_expanded)[0,:,:,:,:]
     
-#     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
+    middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
-#     noise = torch.randn_like(images)
-#     noisy_img = scheduler.add_noise(original_samples=images, noise=noise, timesteps=torch.tensor(sample_time))
-#     noisy_img = noisy_img.to(device)
-#     denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, model)
+    noise = torch.randn_like(images)
+    noisy_img = scheduler.add_noise(original_samples=images, noise=noise, timesteps=torch.tensor(sample_time))
+    noisy_img = noisy_img.to(device)
+    denoised_sample = denoise(noisy_img, sample_time, scheduler, inferer, model)
 
-#     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
-#     axes[0, 0].imshow(images[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-#     axes[0, 0].set_title('Original Image')
+    axes[0, 0].imshow(images[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 0].set_title('Original Image')
 
-#     axes[0, 1].imshow(noisy_img[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-#     axes[0, 1].set_title('Noisy Image')
+    axes[0, 1].imshow(noisy_img[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 1].set_title('Noisy Image')
     
-#     axes[1, 0].imshow(denoised_sample[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-#     axes[1, 0].set_title('Denoised Image')
+    axes[1, 0].imshow(denoised_sample[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].set_title('Denoised Image')
 
-#     error = torch.abs(images - denoised_sample)
-#     axes[1, 1].imshow(error[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-#     axes[1, 1].set_title('Error Image')
+    error = torch.abs(images - denoised_sample)
+    axes[1, 1].imshow(error[middle_slice_idx][0][:,:].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 1].set_title('Error Image')
     
-#     plt.tight_layout()
-#     plt.show()
-#     wandb.log({"sample_image_val": [wandb.Image(plt)]})
-#     fig_filename = os.path.join(output_directory, f'val_step_{step}.png')
-#     #plt.savefig(fig_filename)  # Save the figure
-#     plt.close()  # Close the figure to free up memory
+    plt.tight_layout()
+    plt.show()
+    wandb.log({"sample_image_val": [wandb.Image(plt)]})
+    fig_filename = os.path.join(output_directory, f'val_step_{step}.png')
+    #plt.savefig(fig_filename)  # Save the figure
+    plt.close()  # Close the figure to free up memory
 
-#     all_errors.append(error.flatten())
-
-
-# # # Stack all error values to form a big tensor
-# all_errors_tensor = torch.cat(all_errors)
+    all_errors.append(error.flatten())
 
 
+# # Stack all error values to form a big tensor
+all_errors_tensor = torch.cat(all_errors)
 
-# # %%
-# print(all_errors_tensor.shape)
+
+
+# %%
+all_errors_numpy = all_errors_tensor.cpu().numpy()
+print(all_errors_tensor.shape)
 
 
 # %%
 # all_errors_numpy = all_errors_tensor.cpu().numpy()
-threshold =0.37111389935016614 #np.quantile(all_errors_numpy, 0.95)
+threshold = np.quantile(all_errors_numpy, 0.95)
 print(f"Only 5% of the error values exceed: {threshold}")
 
 
