@@ -74,10 +74,10 @@ imgpath = {}
 # '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv'
 #'/acmenas/hakrami/patched-Diffusion-Models-UAD/Data/splits/IXI_train_fold0.csv',
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
-csvpath_trains=['./Data/splits/combined_4datasets.csv']
-pathBase = '/scratch1/akrami/Data_train'
-csvpath_val = './Data/splits/IXI_test.csv'
-csvpath_test = './Data/splits/Brats21_sub_test.csv'
+csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
+pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_test.csv'
+csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_test.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -99,7 +99,9 @@ for state in states:
     var_csv[state]['norm_path'] = ''
     var_csv[state]['img_path'] = pathBase  + var_csv[state]['img_path']
     var_csv[state]['mask_path'] = pathBase  + var_csv[state]['mask_path']
-    if state != 'test':
+    if state =='val':
+         var_csv[state]['seg_path'] = var_csv[state]['img_path']
+    elif state != 'test':
         var_csv[state]['seg_path'] = None
     else:
         var_csv[state]['seg_path'] = pathBase  + var_csv[state]['seg_path']
@@ -107,7 +109,7 @@ for state in states:
   
     
 data_train = Train(var_csv['train'],config) 
-data_val = Train(var_csv['val'],config)                
+data_val = Eval(var_csv['val'],config)                
 data_test = Eval(var_csv['test'],config)
 
 
@@ -136,7 +138,7 @@ inferer = DiffusionInferer(scheduler)
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
-model_filename ='/scratch1/akrami/storage/DF_results/models/model_2D_epoch975.pt'
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_2D_epoch975.pt'
 model.load_state_dict(torch.load(model_filename))
 model.eval()
 
@@ -233,9 +235,9 @@ for step, batch in progress_bar:
 
     print(images.shape)
     noise = torch.randn_like(images)
-    reshaped_img= masked_image.permute(4,0,1, 3, 2)
-    reshaped_mask = mask.permute(4,0,1, 3, 2)
-    reshaped_noise = noise.permute(4,0,1, 3, 2)
+    reshaped_img= masked_image.permute(4,0,1, 3, 2)[:,0,:,:,:]
+    reshaped_mask = mask.permute(4,0,1, 3, 2)[:,0,:,:,:]
+    reshaped_noise = noise.permute(4,0,1, 3, 2)[:,0,:,:,:]
 
     # print(reshaped_img.shape)
     # print(reshaped_mask.shape)
@@ -262,10 +264,10 @@ for step, batch in progress_bar:
     axes[0, 1].imshow(masked_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(inpainted_image_org[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[1, 0].imshow(inpainted_image_reshaped[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - inpainted_image_org)
+    error = torch.abs(images - inpainted_image_reshaped)
     axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     

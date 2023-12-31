@@ -1,6 +1,6 @@
 # %%
 import wandb
-wandb.init(project='ddpm_3D_inpaint_correct',name='900')
+wandb.init(project='ddpm_3D_inpaint_correct',name='smart_brush_ir')
 import wandb
 
 
@@ -286,7 +286,7 @@ with torch.no_grad():
 # Replace the original conv1 layer with the new one
 model.module.conv_in = new_conv1
 model = model.to(device)
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch975.pt'
+model_filename = '/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch250.pt'#'/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch975.pt'
 model.load_state_dict(torch.load(model_filename)) 
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
@@ -431,9 +431,15 @@ for epoch in range(n_epochs):
         image = images[0:1,:,:,:]
         image = image.to(device)
         current_img = torch.randn_like(image).to(device)
-
+        middle_slice_idx = image.size(-1) // 2
         masks_random_blocks = masks_random_blocks[0:1,:,:,:]
         maked_input = image*masks_random_blocks+(1-masks_random_blocks)* current_img 
+        plt.figure(figsize=(2, 2))
+        plt.imshow(maked_input[0, 0, :, :, middle_slice_idx].cpu()*2, vmin=0, vmax=2, cmap="gray")
+        plt.tight_layout()
+        plt.axis("off")
+        plt.show()
+        wandb.log({"masked_image": [wandb.Image(plt)]})
         combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
         scheduler.set_timesteps(num_inference_steps=1000)
         progress_bar = tqdm(scheduler.timesteps)
@@ -450,18 +456,13 @@ for epoch in range(n_epochs):
                     
 
         middle_slice_idx = image.size(-1) // 2
-        plt.figure(figsize=(2, 2))
-        plt.imshow(current_img[0, 0, :, :, middle_slice_idx].cpu()*2, vmin=0, vmax=2, cmap="gray")
-        plt.tight_layout()
-        plt.axis("off")
-        plt.show()
-        wandb.log({"sample_image": [wandb.Image(plt)]})
+        
         plt.figure(figsize=(2, 2))
         plt.imshow(maked_input[0, 0, :, :, middle_slice_idx].cpu()*2, vmin=0, vmax=2, cmap="gray")
         plt.tight_layout()
         plt.axis("off")
         plt.show()
-        wandb.log({"mask_image": [wandb.Image(plt)]})
+        wandb.log({"sample_image": [wandb.Image(plt)]})
         plt.figure(figsize=(2, 2))
         plt.imshow(image[0, 0, :, :, middle_slice_idx].cpu()*2, vmin=0, vmax=2, cmap="gray")
         plt.tight_layout()
@@ -475,7 +476,7 @@ for epoch in range(n_epochs):
 
         #plt.savefig(filename, dpi=300)  
         # Save the model
-        model_filename = f"./models/small_net/model_inpaint_smart_epoch{epoch}.pt"
+        model_filename = f"./models/small_net/model_inpaint_smart_ir_epoch{epoch}.pt"
         torch.save(model.state_dict(), model_filename)
 
 

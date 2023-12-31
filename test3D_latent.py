@@ -98,7 +98,7 @@ imgpath = {}
 csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
 csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_val_fold0.csv'
-csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
+csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/MSLUB_combined.csv'
 var_csv = {}
 states = ['train','val','test']
 
