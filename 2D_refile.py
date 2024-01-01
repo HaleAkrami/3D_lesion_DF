@@ -76,7 +76,7 @@ imgpath = {}
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
 csvpath_trains=['./Data/splits/combined_4datasets.csv']
 pathBase = '/scratch1/akrami/Data_train'
-csvpath_val = './Data/splits/IXI_test.csv'
+csvpath_val = './Data/splits/NFBS.csv'
 csvpath_test = './Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
@@ -249,7 +249,7 @@ for step, batch in progress_bar:
     inpainted_image_org = images.clone()
     inpainted_image_org[:, :, :,:,center[2]-cube_size:center[2]+cube_size]=inpainted_image_reshaped
     
-    ssim_val =1- ssim_loss(images, inpainted_image_org,mask)
+    ssim_val =1- ssim_loss(images, inpainted_image_org,1-mask)
     mse_val = mse_loss(images[:, :, center[0]-cube_size:center[0]+cube_size,
                               center[1]-cube_size:center[1]+cube_size, 
                               center[2]-cube_size:center[2]+cube_size], 

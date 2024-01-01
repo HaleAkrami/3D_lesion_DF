@@ -9,5 +9,5 @@
 #SBATCH --nodes=1
 eval "$(conda shell.bash hook)"
 conda activate working_monai
-python3 T1T2_train_diff.py
+python3 2D_refile.py
 
