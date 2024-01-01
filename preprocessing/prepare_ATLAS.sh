@@ -37,10 +37,6 @@ python replace.py -i $DATA_DIR/v2skullstripped/ATLAS/mask -s " _t1" ""
 mkdir -p $DATA_DIR/v2skullstripped/ATLAS/seg
 cp -r $INPUT_DIR/seg/* $DATA_DIR/v2skullstripped/ATLAS/seg/
 
-for file in $DATA_DIR/v2skullstripped/ATLAS/seg/*
-do
-  mv "$file" "${file%consensus_gt.nii.gz}seg.nii.gz"
-done
 
 
 echo "Register t2"
