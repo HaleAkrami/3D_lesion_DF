@@ -163,9 +163,9 @@ model = DiffusionModelUNet(
     num_res_blocks=2,
 )
 model.to(device)
-if torch.cuda.device_count() > 1:
-    print("Using", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
+# if torch.cuda.device_count() > 1:
+#     print("Using", torch.cuda.device_count(), "GPUs!")
+model = nn.DataParallel(model)
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)

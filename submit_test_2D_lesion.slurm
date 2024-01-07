@@ -2,7 +2,7 @@
 #SBATCH --account=ajoshi_27
 #SBATCH --partition=gpu
 #SBATCH --time=48:00:00
-#SBATCH --gres=gpu:v100:2
+#SBATCH --gres=gpu:v100:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=128G
