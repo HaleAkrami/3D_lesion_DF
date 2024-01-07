@@ -36,21 +36,22 @@ from dataloader import Train ,Eval
 from torch.nn.functional import mse_loss
 from monai.losses.ssim_loss import SSIMLoss
 import torch
-import tqdm
+from tqdm import tqdm
 from torch.cuda.amp import autocast
-
+from monai.networks.blocks import Convolution
 # Configuration
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='2D_ddpm_final',name='test_inpaint_nfbs')
+wandb.init(project='3D_ddpm_final',name='test_inpaint_br_ixi_smart')
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 # Initialize Configuration
 config = {
     'batch_size': 1,
     'imgDimResize': (160, 192, 160),
     'imgDimPad': (208, 256, 208),
-    'spatialDims': '2D',
+    'spatialDims': '3D',
     'unisotropic_sampling': True,
     'perc_low': 1,
     'perc_high': 99,
@@ -76,7 +77,7 @@ imgpath = {}
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
 csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
-csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/NFBS.csv'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_test.csv'
 csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_test.csv'
 var_csv = {}
 states = ['train','val','test']
@@ -99,9 +100,7 @@ for state in states:
     var_csv[state]['norm_path'] = ''
     var_csv[state]['img_path'] = pathBase  + var_csv[state]['img_path']
     var_csv[state]['mask_path'] = pathBase  + var_csv[state]['mask_path']
-    if state =='val':
-         var_csv[state]['seg_path'] = var_csv[state]['img_path']
-    elif state != 'test':
+    if state != 'test':
         var_csv[state]['seg_path'] = None
     else:
         var_csv[state]['seg_path'] = pathBase  + var_csv[state]['seg_path']
@@ -109,7 +108,7 @@ for state in states:
   
     
 data_train = Train(var_csv['train'],config) 
-data_val = Eval(var_csv['val'],config)                
+data_val = Train(var_csv['val'],config)                
 data_test = Eval(var_csv['test'],config)
 
 
@@ -120,7 +119,7 @@ device = torch.device("cuda")
 
 
 model = DiffusionModelUNet(
-    spatial_dims=2,
+    spatial_dims=3,
     in_channels=1,
     out_channels=1,
     num_channels=[32, 64, 64],
@@ -128,18 +127,48 @@ model = DiffusionModelUNet(
     num_head_channels=[0, 0,32],
     num_res_blocks=2,
 )
+model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_large_epoch999.pt'
+
 model.to(device)
 if torch.cuda.device_count() > 1:
     print("Using", torch.cuda.device_count(), "GPUs!")
     model = nn.DataParallel(model)
+
+model.load_state_dict(torch.load(model_filename)) 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)
 
-optimizer = torch.optim.Adam(params=model.parameters(), lr=5e-5)
 
-model_filename ='/acmenas/hakrami/3D_lesion_DF/models/small_net/model_2D_epoch975.pt'
-model.load_state_dict(torch.load(model_filename))
+
+original_conv1 = model.module.conv_in
+new_conv1 = Convolution(
+            spatial_dims=3,
+            in_channels=2,
+            out_channels=original_conv1.out_channels,
+            strides=1,
+            kernel_size=3,
+            padding=1,
+            conv_only=True,
+        )
+
+# # Create a new conv layer with 3 input channels and the same output channels, kernel size, etc.
+# new_conv1 = nn.Conv2d(3, original_conv1.out_channels, kernel_size=original_conv1.kernel_size, 
+#                       stride=original_conv1.stride, padding=original_conv1.padding)
+
+# Copy the weights from the original channel
+with torch.no_grad():
+    new_conv1.conv.weight[:, :1, :, :,:] = original_conv1.conv.weight.clone()  # Copy weights for the original channel
+    # Initialize the weights for the new channels to zero
+    new_conv1.conv.weight[:, 1:, :, :,:].zero_()  # Zero out weights for the additional channels
+    new_conv1.conv.bias = torch.nn.Parameter(original_conv1.conv.bias.clone())
+
+
+# Replace the original conv1 layer with the new one
+model.module.conv_in = new_conv1
+model = model.to(device)
+model_filename = '/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_ir_epoch275.pt'#'/acmenas/hakrami/3D_lesion_DF/models/small_net/model_inpaint_smart_epoch975.pt'
+model.load_state_dict(torch.load(model_filename)) 
 model.eval()
 
 def denoise(noised_img,sample_time,scheduler,inferer,model):
@@ -157,53 +186,7 @@ def denoise(noised_img,sample_time,scheduler,inferer,model):
     
 
 
-def inpaint_image(image_array, mask, mean_denoised, model, scheduler, device):
-    # Convert inputs to tensors and move to the specified device
-    
-    mask = mask.to(device)
-    val_image_masked = image_array.to(device)
-    val_image_inpainted = torch.randn_like(val_image_masked).to(device)
-    timesteps = torch.Tensor((999,)).to(device).long()
-    scheduler.set_timesteps(num_inference_steps=999)
-    progress_bar = tqdm.tqdm(scheduler.timesteps)
-    batch_size = val_image_masked.shape[0]
-    num_resample_steps = 4
-    with torch.no_grad():
-        with autocast(enabled=True):
-            for t in progress_bar:
-                for u in range(num_resample_steps):
-                # get the known portion at t-1
-                    if t > 0:
-                        noise =  torch.randn_like(val_image_masked).to(device)
-                        timesteps_prev_batch = torch.full((batch_size,), t-1).to(device).long()
-                        val_image_inpainted_prev_known = scheduler.add_noise(
-                            original_samples=val_image_masked, noise=noise, timesteps=timesteps_prev_batch
-                        )
-                    else:
-                        val_image_inpainted_prev_known = val_image_masked
-                
-                # perform a denoising step to get the unknown portion at t-1
-                    if t > 0:
-                        timesteps = torch.Tensor((t,)).to(device).long()
-                        timesteps_batch = torch.full((batch_size,), t).to(device).long()
-                        model_output = model(val_image_inpainted, timesteps=timesteps_batch)
-                        val_image_inpainted_prev_unknown, _ = scheduler.step(model_output, t, val_image_inpainted)
 
-                    # combine known and unknown using the mask
-                    val_image_inpainted = torch.where(
-                        mask == 1, val_image_inpainted_prev_known, val_image_inpainted_prev_unknown
-                    )
-
-                    # perform resampling
-                    if t > 0 and u < (num_resample_steps - 1):
-                        # sample x_t from x_t-1
-                        noise = torch.randn_like(val_image_masked).to(device)
-                        val_image_inpainted = (
-                            torch.sqrt(1 - scheduler.betas[t - 1]) * val_image_inpainted
-                            + torch.sqrt(scheduler.betas[t - 1]) * noise
-                        )
-    
-    return val_image_inpainted
 
 sample_time = 500
 i = 0
@@ -213,7 +196,8 @@ all_mse = []
 all_ssim_values=[]
 model.eval()
 test_loader_iter = iter(test_loader)
-progress_bar = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
+
+progress_bar = tqdm(enumerate(val_loader), total=len(val_loader), ncols=70)
 for step, batch in progress_bar:
     sub_test = next(test_loader_iter)
     images = batch['vol']['data'].to(device)
@@ -229,45 +213,55 @@ for step, batch in progress_bar:
     middle_slice_idx = images.size(-1) // 2  # Define middle_slice_idx here
 
 
-    mask =1- (sub_test['seg']['data']>0).float().to(device)
-    masked_image = images * mask
+
+    center = [dim // 2 for dim in images.shape[2:]]  # Calculate center indices
+    cube_size = 20  # Half-size of the cube
+    masks_random_blocks =1- (sub_test['seg']['data']>0).float().to(device)
+
+    image = images.to(device)
+    current_img = torch.randn_like(image).to(device)
+
     
 
-    print(images.shape)
-    noise = torch.randn_like(images)
-    reshaped_img= masked_image.permute(4,0,1, 3, 2)[:,0,:,:,:]
-    reshaped_mask = mask.permute(4,0,1, 3, 2)[:,0,:,:,:]
-    reshaped_noise = noise.permute(4,0,1, 3, 2)[:,0,:,:,:]
+    maked_input = image*masks_random_blocks+(1-masks_random_blocks)* current_img 
 
-    # print(reshaped_img.shape)
-    # print(reshaped_mask.shape)
-    # print(reshaped_noise.shape)
-    
-    
-    inpainted_image = inpaint_image(reshaped_img, reshaped_mask, reshaped_noise, model, scheduler, device)
-    inpainted_image_reshaped = inpainted_image.permute(1,3,2,0).unsqueeze(0)
-
-
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    axes[0, 1].imshow(maked_input[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    axes[0, 1].set_title('Noisy Image')
+    combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
+    scheduler.set_timesteps(num_inference_steps=1000)
+    progress_bar = tqdm(scheduler.timesteps)
+    middle_slice_idx = image.size(-1) // 2
    
-    print(images.shape)
-    print(inpainted_image_reshaped.shape)
-    print(mask.shape)
-    ssim_val =1- ssim_loss(images, inpainted_image_reshaped,1-mask)
-    mse_val = mse_loss(images,inpainted_image_reshaped)
+    for t in progress_bar:  # go through the noising process
+        with autocast(enabled=False):
+            with torch.no_grad():
+                model_output = model(combined_tensor, timesteps=torch.Tensor((t,)).to(image.device))
+                current_img, _ = scheduler.step(
+                    model_output, t, maked_input
+                )  # this is the prediction x_t at the time step t
+                maked_input = image*masks_random_blocks+(1-masks_random_blocks)* current_img
+                combined_tensor = torch.cat(( maked_input,masks_random_blocks), dim=1)
+    
+
+    inpainted_image =  combined_tensor
+
+
+    ssim_val =1- ssim_loss(images, maked_input,1-masks_random_blocks)
+    mse_val = mse_loss(maked_input,images)
     all_ssim_values.append(ssim_val.item())
     all_mse.append(mse_val.item())
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    
 
     axes[0, 0].imshow(images[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[0, 0].set_title('Original Image')
 
-    axes[0, 1].imshow(masked_image[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
-    axes[0, 1].set_title('Noisy Image')
     
-    axes[1, 0].imshow(inpainted_image_reshaped[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
+    
+    axes[1, 0].imshow(maked_input[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 0].set_title('Denoised Image')
 
-    error = torch.abs(images - inpainted_image_reshaped)
+    error = torch.abs(images - inpainted_image)
     axes[1, 1].imshow(error[i][0][:,:,middle_slice_idx].squeeze().cpu().numpy(), vmin=0, vmax=2, cmap='gray')
     axes[1, 1].set_title('Error Image')
     

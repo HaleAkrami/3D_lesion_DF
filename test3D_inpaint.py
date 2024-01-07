@@ -43,7 +43,7 @@ from torch.cuda.amp import autocast
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm_final',name='test_inpaint')
+wandb.init(project='3D_ddpm_final',name='test_inpaint_NFBS')
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,4"
 
 # Initialize Configuration
@@ -77,7 +77,7 @@ imgpath = {}
 #csvpath_trains = ['/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv', '/project/ajoshi_27/akrami/patched-Diffusion-Models-UAD/Data/splits/BioBank_train.csv']
 csvpath_trains=['/acmenas/hakrami/3D_lesion_DF/Data/splits/combined_4datasets.csv']
 pathBase = '/acmenas/hakrami/patched-Diffusion-Models-UAD/Data_train'
-csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/IXI_test.csv'
+csvpath_val = '/acmenas/hakrami/3D_lesion_DF/Data/splits/NFBS.csv'
 csvpath_test = '/acmenas/hakrami/3D_lesion_DF/Data/splits/Brats21_sub_test.csv'
 var_csv = {}
 states = ['train','val','test']
