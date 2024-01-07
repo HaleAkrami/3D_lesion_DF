@@ -47,7 +47,7 @@ from dataloader import Train ,Eval
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='2D_ddpm_final',name='MSLUB')
+wandb.init(project='2D_ddpm_final',name='ATLAS')
 
 JUPYTER_ALLOW_INSECURE_WRITES=True
 
@@ -96,7 +96,7 @@ imgpath = {}
 csvpath_trains=['./Data/splits/combined_4datasets.csv']
 pathBase = '/scratch1/akrami/Data_train'
 csvpath_val = './Data/splits/IXI_val_fold0.csv'
-csvpath_test = './Data/splits/MSLUB_combined.csv'
+csvpath_test = './Data/splits/ATLAS.csv'
 var_csv = {}
 states = ['train','val','test']
 

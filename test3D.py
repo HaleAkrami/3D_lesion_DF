@@ -47,7 +47,7 @@ from dataloader import Train ,Eval
 sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
 warnings.filterwarnings('ignore')
 import wandb
-wandb.init(project='3D_ddpm',name='test')
+wandb.init(project='3D_ddpm_final',name='ATLAS')
 
 JUPYTER_ALLOW_INSECURE_WRITES=True
 
@@ -96,7 +96,7 @@ imgpath = {}
 csvpath_trains=['./Data/splits/combined_4datasets.csv']
 pathBase = '/scratch1/akrami/Data_train'
 csvpath_val = './Data/splits/IXI_val_fold0.csv'
-csvpath_test = './Data/splits/MSLUB_combined.csv'
+csvpath_test = './Data/splits/ATLAS.csv'
 var_csv = {}
 states = ['train','val','test']
 
@@ -163,9 +163,9 @@ model = DiffusionModelUNet(
     num_res_blocks=2,
 )
 model.to(device)
-if torch.cuda.device_count() > 1:
-    print("Using", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
+# if torch.cuda.device_count() > 1:
+#     print("Using", torch.cuda.device_count(), "GPUs!")
+model = nn.DataParallel(model)
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="scaled_linear_beta", beta_start=0.0005, beta_end=0.0195)
 
 inferer = DiffusionInferer(scheduler)

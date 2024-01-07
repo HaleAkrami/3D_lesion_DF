@@ -22,10 +22,8 @@ echo "Resample"
 mkdir -p $DATA_DIR/v1resampled/ATLAS/t1
 python resample.py -i $INPUT_DIR/t1 -o $DATA_DIR/v1resampled/ATLAS/t1 -r 1.0 1.0 1.0 
 ## rename files for standard naming
-for file in $DATA_DIR/v1resampled/ATLAS/t1/*
-do
-  mv "$file" "${file%_T1W.nii.gz}_t1.nii.gz"
-done
+
+
 
 echo "Generate masks"
 # mkdir -p $DATA_DIR/v2skullstripped/MSLUB/t2
